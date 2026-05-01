@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { Swiper, SwiperItem } from '@tarojs/components'
+import { callEdgeFunction } from '@/utils/callEdgeFunction'
 
 const features = [
   {
@@ -84,6 +86,18 @@ export default function Home() {
     title: '法律助手 - 大学生法律知识搜索工具',
   }))
 
+  const [currentCity, setCurrentCity] = useState('')
+
+  // 静默获取 IP 城市，失败不影响页面其他功能
+  useEffect(() => {
+    callEdgeFunction<{ city?: string; province?: string }>('ip-location', { method: 'GET' })
+      .then(({ data }) => {
+        const city = data?.city || data?.province || ''
+        if (city) setCurrentCity(city)
+      })
+      .catch(() => { /* 静默忽略 */ })
+  }, [])
+
   const navigate = (path: string) => {
     // TabBar 页面必须用 switchTab，非 TabBar 页面用 navigateTo
     if (TAB_BAR_PATHS.includes(path)) {
@@ -97,9 +111,18 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Hero区域 */}
       <div className="bg-primary-solid px-6 pt-8 pb-12">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="i-mdi-scale-balance text-3xl text-primary-foreground opacity-80" />
-          <span className="text-2xl font-bold text-primary-foreground">法律助手</span>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="i-mdi-scale-balance text-3xl text-primary-foreground opacity-80" />
+            <span className="text-2xl font-bold text-primary-foreground">法律助手</span>
+          </div>
+          {/* IP 当前城市标签 */}
+          {currentCity ? (
+            <div className="flex items-center gap-1 px-3 py-1 bg-white/20 rounded-full">
+              <div className="i-mdi-map-marker text-xl text-primary-foreground opacity-80" />
+              <span className="text-xl text-primary-foreground opacity-90">{currentCity}</span>
+            </div>
+          ) : null}
         </div>
         <p className="text-xl text-primary-foreground opacity-80">专为大学生设计的法律知识平台</p>
         <p className="text-xl text-primary-foreground opacity-60 mt-1">租房 · 求职 · 维权</p>

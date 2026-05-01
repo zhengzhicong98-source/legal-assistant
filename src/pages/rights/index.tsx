@@ -194,6 +194,8 @@ export default function Rights() {
   const [selectedType, setSelectedType] = useState<string>('全部')
   const [centers, setCenters] = useState<RightsCenter[]>([])
   const [loading, setLoading] = useState(false)
+  /** IP 自动定位状态：显示「已自动定位到 XX」提示 */
+  const [autoLocCity, setAutoLocCity] = useState('')
 
   // 附近机构
   const [nearbyResults, setNearbyResults] = useState<BaiduPlace[]>([])
@@ -214,6 +216,30 @@ export default function Rights() {
   }, [])
 
   useEffect(() => { loadProvinces() }, [loadProvinces])
+
+  /** 页面加载时通过 IP 自动定位，并加载当地维权机构 */
+  useEffect(() => {
+    const autoLocate = async () => {
+      const { data, error } = await callEdgeFunction<{ province?: string; city?: string }>('ip-location', { method: 'GET' })
+      if (error || !data?.province) return // 静默失败，不影响手动操作
+
+      const { province, city } = data
+      // 并行加载省份的城市列表与机构数据
+      const [citiesData, centersData] = await Promise.all([
+        getCitiesByProvince(province),
+        getRightsCenters({ province, city: city || undefined }),
+      ])
+
+      setProvinces(prev => prev.length > 0 ? prev : [province])
+      setCities(citiesData)
+      setSelectedProvince(province)
+      setSelectedCity(city || '')
+      setCenters(centersData)
+      // 显示城市标识（直辖市省市相同时取省即可）
+      setAutoLocCity(city || province)
+    }
+    autoLocate()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleProvinceChange = useCallback(async (province: string) => {
     setSelectedProvince(province)
@@ -307,6 +333,13 @@ export default function Rights() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* IP 自动定位提示条 */}
+      {autoLocCity ? (
+        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border-b border-primary/20">
+          <div className="i-mdi-map-marker-check text-xl text-primary flex-shrink-0" />
+          <p className="text-xl text-primary">已根据 IP 自动定位到 <span className="font-semibold">{autoLocCity}</span></p>
+        </div>
+      ) : null}
       {/* 标签切换 */}
       <div className="sticky top-0 z-10 bg-card border-b border-border px-4 pt-3">
         <div className="flex gap-1 bg-muted rounded-xl p-1 mb-0">
