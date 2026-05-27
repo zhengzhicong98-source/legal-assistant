@@ -3,11 +3,18 @@ const pages = [
   'pages/consult/index',
   'pages/contract/index',
   'pages/tools/index',
+  'pages/plaza/index',
+  'pages/plaza/post',
+  'pages/plaza/detail',
   'pages/document/index',
   'pages/calculator/index',
   'pages/rights/index',
   'pages/evidence/index',
   'pages/admin/index',
+  'pages/login/index',
+  'pages/profile/index',
+  'pages/profile/history',
+  'pages/profile/saved',
 ]
 
 export default defineAppConfig({
@@ -37,10 +44,10 @@ export default defineAppConfig({
         selectedIconPath: './assets/icons/contract_selected.png',
       },
       {
-        pagePath: 'pages/tools/index',
-        text: '工具箱',
-        iconPath: './assets/icons/tools_unselected.png',
-        selectedIconPath: './assets/icons/tools_selected.png',
+        pagePath: 'pages/plaza/index',
+        text: '广场',
+        iconPath: './assets/icons/plaza_unselected.png',
+        selectedIconPath: './assets/icons/plaza_selected.png',
       },
     ]
   },
@@ -56,4 +63,4 @@ export default defineAppConfig({
     }
   },
   requiredPrivateInfos: ['getFuzzyLocation'],
-})
+  })

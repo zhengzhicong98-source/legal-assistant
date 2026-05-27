@@ -12,9 +12,9 @@
   "scripts": {
     "dev": "echo This environment does not support running dev and build scripts. Do not attempt to run them. To validate code correctness, please run the lint script instead.",
     "dev:h5": "echo This environment does not support running dev and build scripts. Do not attempt to run them. To validate code correctness, please run the lint script instead.",
-    "dev:weapp": "echo This environment does not support running dev and build scripts. Do not attempt to run them. To validate code correctness, please run the lint script instead.",
+    "dev:weapp": "taro build --type weapp --watch",
     "build": "echo This environment does not support running dev and build scripts. Do not attempt to run them. To validate code correctness, please run the lint script instead.",
-    "build:weapp": "echo This environment does not support running dev and build scripts. Do not attempt to run them. To validate code correctness, please run the lint script instead.",
+    "build:weapp": "taro build --type weapp",
     "postinstall": "weapp-tw patch",
     "lint": "./scripts/runLint.sh"
   },
@@ -48,6 +48,9 @@
   },
   "devDependencies": {
     "@babel/core": "^7.28.6",
+    "@babel/plugin-proposal-decorators": "^7.29.0",
+    "@babel/plugin-transform-class-properties": "^7.28.6",
+    "@babel/plugin-transform-private-methods": "^7.28.6",
     "@babel/preset-react": "^7.28.5",
     "@biomejs/biome": "2.4.5",
     "@egoist/tailwindcss-icons": "^1.9.0",
