@@ -8,6 +8,18 @@ const supabaseAnonKey: string = process.env.TARO_APP_SUPABASE_ANON_KEY || 'TOKEN
 const appId: string = process.env.TARO_APP_APP_ID!
 
 let noticed = false
+
+/**
+ * 自定义 fetch 实现，将标准 fetch 请求适配为 Taro.request 调用。
+ *
+ * 为什么不用原生 fetch：
+ * - 微信小程序环境不支持标准 fetch API，必须通过 Taro.request 发起网络请求。
+ * - Supabase JS SDK 内部使用 fetch 与 Supabase API 通信，通过注入 customFetch
+ *   使 SDK 在微信环境下正常工作。
+ * - H5 环境下另有 callEdgeFunction 工具函数处理，此处聚焦微信端适配。
+ *
+ * 同时提供统一的错误处理：当 Supabase 返回错误时，通过 Toast 提示用户。
+ */
 export const customFetch: typeof fetch = async (url: string, options: RequestInit) => {
   let headers: HeadersInit = options.headers || {}
   const {method = 'GET', body} = options
