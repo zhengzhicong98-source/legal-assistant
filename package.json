@@ -15,6 +15,7 @@
     "dev:weapp": "taro build --type weapp --watch",
     "build": "echo This environment does not support running dev and build scripts. Do not attempt to run them. To validate code correctness, please run the lint script instead.",
     "build:weapp": "taro build --type weapp",
+    "build:h5": "taro build --type h5",
     "postinstall": "weapp-tw patch",
     "lint": "./scripts/runLint.sh"
   },
