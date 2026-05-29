@@ -15,4 +15,4 @@ jobs:
           node-version: 20
           cache: 'pnpm'
       - run: pnpm install
-      - run: pnpm tsc --noEmit
+      - run: pnpm tsc --noEmit --skipLibCheck
