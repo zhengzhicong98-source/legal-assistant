@@ -47,7 +47,7 @@ jobs:
           TARO_APP_SUPABASE_URL: ${{ secrets.TARO_APP_SUPABASE_URL }}
           TARO_APP_SUPABASE_ANON_KEY: ${{ secrets.TARO_APP_SUPABASE_ANON_KEY }}
           TARO_APP_APP_ID: ${{ secrets.TARO_APP_APP_ID }}
-          BASE_URL: /legal-assistant/
+          PUBLIC_PATH: /legal-assistant/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

@@ -9,7 +9,7 @@ import lintConfig from './lint'
 import prodConfig from './prod'
 
 const base = String(process.argv[process.argv.length - 1])
-const publicPath = base.startsWith('http') ? base : '/'
+const publicPath = process.env.PUBLIC_PATH || (base.startsWith('http') ? base : '/')
 
 // https://taro-docs.jd.com/docs/next/config#defineconfig-辅助函数
 export default defineConfig<'vite'>(async (merge) => {
