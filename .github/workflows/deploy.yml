@@ -35,8 +35,11 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      - name: Remove workspace config
+        run: rm -f pnpm-workspace.yaml
+
       - name: Install dependencies
-        run: pnpm install --ignore-workspace
+        run: pnpm install
 
       - name: Build H5
         run: pnpm build:h5
