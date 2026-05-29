@@ -45,24 +45,25 @@
   }
 }
 
-/* H5 桌面端适配 - 模拟手机屏幕 */
+/* H5 桌面端适配 - 缩小显示 */
 html {
   background: #e8e8e8;
 }
 
 body {
-  max-width: 390px;
-  min-height: 100vh;
+  max-width: 130px;
+  min-height: 25vh;
   margin: 0 auto;
   background: #ffffff;
   box-shadow: 0 0 20px rgba(0,0,0,0.15);
   position: relative;
   overflow-x: hidden;
+  transform: scale(0.33);
+  transform-origin: top center;
 }
 
 #app {
-  max-width: 390px;
-  min-height: 100vh;
+  max-width: 130px;
   overflow-x: hidden;
 }
 
