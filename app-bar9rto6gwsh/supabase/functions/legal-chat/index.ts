@@ -164,13 +164,10 @@ Deno.serve(async (req) => {
       : mode === 'dispute' ? DISPUTE_SYSTEM_PROMPT
       : LEGAL_SYSTEM_PROMPT) + ragContext
 
-    const apiMessages = [
-      { role: 'system', content: systemPrompt },
-      ...messages.map((m: { role: string; content: string }) => ({
-        role: m.role,
-        content: m.content,
-      }))
-    ]
+    const apiMessages = messages.map((m: { role: string; content: string }) => ({
+      role: m.role,
+      content: m.content,
+    }))
 
     // 从环境变量读取模型名
     // gateway 兼容 OpenAI API 格式（embedding 端点用 text-embedding-3-small 可验证），
@@ -192,6 +189,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           model: modelName,
           messages: apiMessages,
+          system: systemPrompt,
           stream: false, // 关闭流式，直接返回完整 JSON
         }),
         signal: chatController.signal,
