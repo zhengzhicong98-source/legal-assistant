@@ -99,6 +99,9 @@ export default defineConfig<'vite'>(async (merge) => {
     h5: {
       publicPath,
       staticDirectory: 'static',
+      router: {
+        mode: 'hash'  // hash 路由避免 GitHub Pages 刷新 404
+      },
 
       sassLoaderOption: {
         additionalData: `@use "@/styles/overrides.scss";`
