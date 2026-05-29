@@ -42,7 +42,7 @@ jobs:
         run: pnpm install
 
       - name: Build H5
-        run: pnpm build:h5 -- /legal-assistant/
+        run: pnpm build:h5
         env:
           TARO_APP_SUPABASE_URL: ${{ secrets.TARO_APP_SUPABASE_URL }}
           TARO_APP_SUPABASE_ANON_KEY: ${{ secrets.TARO_APP_SUPABASE_ANON_KEY }}
