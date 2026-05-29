@@ -107,7 +107,7 @@ export default defineConfig<'vite'>(async (merge) => {
     },
     h5: {
       publicPath,
-      assetsPublicPath: process.env.PUBLIC_PATH || '/',
+      assetsPublicPath: '/',
       staticDirectory: 'static',
       output: {
         filename: 'js/[name].[hash].js',
