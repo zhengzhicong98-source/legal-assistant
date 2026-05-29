@@ -3,7 +3,9 @@ import Taro, { useDidShow, useShareAppMessage, useShareTimeline } from '@tarojs/
 import { Image } from '@tarojs/components'
 import { useAuth } from '@/contexts/AuthContext'
 import { withRouteGuard } from '@/components/RouteGuard'
-import { getUserStats } from '@/db/api'
+import { getUserStats, getConsultHistory } from '@/db/api'
+import type { ConsultHistory } from '@/db/types'
+import LegalUniverse from '@/components/LegalUniverse'
 
 function ProfilePage() {
   useShareAppMessage(() => ({ title: '个人中心 - 法律助手' }))
@@ -11,16 +13,21 @@ function ProfilePage() {
 
   const { user, profile, signOut, refreshProfile } = useAuth()
   const [stats, setStats] = useState({ consultCount: 0, savedCount: 0, caseCount: 0 })
+  const [consultHistory, setConsultHistory] = useState<ConsultHistory[]>([])
 
-  const loadStats = useCallback(async () => {
+  const loadData = useCallback(async () => {
     if (!user) return
     await refreshProfile()
-    const s = await getUserStats(user.id)
+    const [s, history] = await Promise.all([
+      getUserStats(user.id),
+      getConsultHistory(user.id, 50),
+    ])
     setStats(s)
+    setConsultHistory(history)
   }, [user, refreshProfile])
 
-  useEffect(() => { loadStats() }, [loadStats])
-  useDidShow(() => { loadStats() })
+  useEffect(() => { loadData() }, [loadData])
+  useDidShow(() => { loadData() })
 
   const joinDays = user?.created_at
     ? Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000)
@@ -84,6 +91,13 @@ function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* 我的维权宇宙 */}
+      {consultHistory.length > 0 && (
+        <div className="px-4 mt-4">
+          <LegalUniverse history={consultHistory} />
+        </div>
+      )}
 
       {/* 功能菜单 */}
       <div className="px-4 mt-4">
