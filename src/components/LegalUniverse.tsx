@@ -318,7 +318,7 @@ function ShareButton() {
     Taro.showShareMenu({
       withShareTicket: false,
       menus: ['shareAppMessage'],
-    })
+    } as any)
     Taro.showToast({ title: '请点击右上角分享', icon: 'none' })
   }, [])
 
