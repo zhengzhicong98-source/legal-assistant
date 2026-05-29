@@ -40,7 +40,12 @@ export default defineConfig<'vite'>(async (merge) => {
       'process.env.TARO_APP_APP_ID': JSON.stringify(process.env.TARO_APP_APP_ID || ''),
     },
     copy: {
-      patterns: [],
+      patterns: [
+        {
+          from: 'src/assets/icons/',
+          to: 'dist/assets/icons/',
+        }
+      ],
       options: {}
     },
     framework: 'react',
