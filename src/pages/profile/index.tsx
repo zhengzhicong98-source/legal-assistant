@@ -93,11 +93,9 @@ function ProfilePage() {
       </div>
 
       {/* 我的维权宇宙 */}
-      {consultHistory.length > 0 && (
-        <div className="px-4 mt-4">
-          <LegalUniverse history={consultHistory} />
-        </div>
-      )}
+      <div className="px-4 mt-4">
+        <LegalUniverse history={consultHistory} />
+      </div>
 
       {/* 功能菜单 */}
       <div className="px-4 mt-4">
