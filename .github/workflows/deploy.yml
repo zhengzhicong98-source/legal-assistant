@@ -36,7 +36,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --ignore-workspace
 
       - name: Build H5
         run: pnpm build:h5
