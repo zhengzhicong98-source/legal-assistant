@@ -45,19 +45,25 @@
   }
 }
 
-html, body {
-  max-width: 480px;
-  margin: 0 auto;
+/* H5 桌面端适配 - 模拟手机屏幕 */
+html {
+  background: #e8e8e8;
+}
+
+body {
+  max-width: 390px;
   min-height: 100vh;
-  background: #f5f5f5;
+  margin: 0 auto;
+  background: #ffffff;
+  box-shadow: 0 0 20px rgba(0,0,0,0.15);
+  position: relative;
+  overflow-x: hidden;
 }
 
 #app {
-  max-width: 480px;
-  margin: 0 auto;
-  background: #fff;
+  max-width: 390px;
   min-height: 100vh;
-  position: relative;
+  overflow-x: hidden;
 }
 
 @layer utilities {
