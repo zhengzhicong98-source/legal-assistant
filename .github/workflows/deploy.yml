@@ -41,6 +41,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Verify env
+        run: echo "SUPABASE_URL is set=${{ secrets.TARO_APP_SUPABASE_URL != '' }}"
+        
       - name: Build H5
         run: pnpm build:h5
         env:
