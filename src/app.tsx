@@ -7,16 +7,19 @@
 // for 'react', creating a second React instance that conflicts with the framework bundle.
 import 'react'
 import type React from 'react'
-import type {PropsWithChildren} from 'react'
-import {useTabBarPageClass} from '@/hooks/useTabBarPageClass'
-import {AuthProvider} from '@/contexts/AuthContext'
-
+import type { PropsWithChildren } from 'react'
+import { useTabBarPageClass } from '@/hooks/useTabBarPageClass'
+import { AuthProvider } from '@/contexts/AuthContext'
+import WebLayout from '@/components/WebLayout'
 import './app.scss'
 
-const App: React.FC = ({children}: PropsWithChildren<unknown>) => {
+const App: React.FC = ({ children }: PropsWithChildren<unknown>) => {
   useTabBarPageClass()
-
-  return <AuthProvider>{children}</AuthProvider>
+  return (
+    <AuthProvider>
+      <WebLayout>{children}</WebLayout>
+    </AuthProvider>
+  )
 }
 
 export default App

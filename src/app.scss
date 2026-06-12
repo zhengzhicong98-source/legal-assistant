@@ -45,24 +45,24 @@
   }
 }
 
-/* H5 桌面端适配 */
-html {
-  background: #e8e8e8;
-}
-
-body {
-  width: 390px;
+/* 响应式布局 */
+html, body {
+  width: 100%;
   min-height: 100vh;
-  margin: 0 auto;
-  background: #ffffff;
-  box-shadow: 0 0 20px rgba(0,0,0,0.15);
+  margin: 0;
+  padding: 0;
+  background: hsl(var(--background));
   overflow-x: hidden;
-  zoom: 0.75;
 }
 
 #app {
-  width: 390px;
-  overflow-x: hidden;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* H5 隐藏底部 tabbar */
+.taro-tabbar__tabbar {
+  display: none !important;
 }
 
 @layer utilities {
