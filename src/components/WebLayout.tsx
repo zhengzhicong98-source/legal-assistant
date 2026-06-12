@@ -1,5 +1,4 @@
 import Taro from '@tarojs/taro'
-import { useLocation } from '@tarojs/router'
 
 const NAV_ITEMS = [
   { path: '/pages/home/index', label: '首页', icon: '🏠' },
@@ -12,8 +11,9 @@ export default function WebLayout({ children }: { children: React.ReactNode }) {
   // 仅 H5 渲染
   if (process.env.TARO_ENV !== 'h5') return <>{children}</>
 
-  const location = useLocation()
-  const currentPath = location?.path || ''
+  const pages = Taro.getCurrentPages()
+  const currentPage = pages[pages.length - 1]
+  const currentPath = currentPage?.route || ''
 
   return (
     <div style={{ minHeight: '100vh', background: 'hsl(var(--background))' }}>
