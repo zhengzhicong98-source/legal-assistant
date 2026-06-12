@@ -201,6 +201,95 @@ export default function Chat() {
     setLoading(true)
 
     const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }))
+
+    // H5 环境使用流式输出
+    if (process.env.TARO_ENV === 'h5') {
+      const supabaseUrl = process.env.TARO_APP_SUPABASE_URL
+      const anonKey = process.env.TARO_APP_SUPABASE_ANON_KEY
+      const url = `${supabaseUrl}/functions/v1/legal-chat`
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${anonKey}`,
+            'apikey': anonKey || '',
+          },
+          body: JSON.stringify({ messages: apiMessages, mode: 'chat' }),
+        })
+
+        if (!response.ok || !response.body) {
+          throw new Error('请求失败')
+        }
+
+        // 添加一条空的 assistant 消息占位，之后逐步追加内容
+        const assistantMsg: ChatMessage = {
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          ragUsed: false,
+        }
+        setMessages([...newMessages, assistantMsg])
+        setLoading(false)
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let fullContent = ''
+        let ragUsed = false
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            const trimmed = line.trim()
+            if (!trimmed.startsWith('data:')) continue
+            const jsonStr = trimmed.slice(5).trim()
+            if (jsonStr === '[DONE]') break
+            try {
+              const data = JSON.parse(jsonStr)
+              // 检查是否是末尾的 rag_used 元数据
+              if ('rag_used' in data) {
+                ragUsed = data.rag_used
+                continue
+              }
+              const delta = data?.choices?.[0]?.delta?.content || ''
+              if (delta) {
+                fullContent += delta
+                // 实时更新消息内容
+                setMessages(prev => {
+                  const updated = [...prev]
+                  updated[updated.length - 1] = {
+                    ...updated[updated.length - 1],
+                    content: fullContent,
+                    ragUsed,
+                  }
+                  return updated
+                })
+              }
+            } catch { /* 跳过无效 chunk */ }
+          }
+        }
+
+        // 流结束后保存历史
+        if (user && fullContent) {
+          saveConsultHistory(user.id, text.trim(), fullContent, ragUsed).catch(() => {})
+        }
+
+      } catch (err) {
+        console.error('流式咨询错误:', err)
+        Taro.showToast({ title: '咨询失败，请稍后重试', icon: 'none' })
+        setMessages(newMessages)
+        setLoading(false)
+      }
+      return
+    }
+
+    // 小程序环境保持原有非流式逻辑
     const { data, error } = await callEdgeFunction<{ content?: string; rag_used?: boolean }>('legal-chat', {
       body: { messages: apiMessages, mode: 'chat' },
     })
@@ -219,7 +308,6 @@ export default function Chat() {
         ragUsed,
       }
       setMessages([...newMessages, assistantMsg])
-      // 已登录时异步保存咨询历史
       if (user) {
         saveConsultHistory(user.id, text.trim(), aiContent, ragUsed).catch(() => {})
       }

@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
           model: modelName,
           messages: apiMessages,
           system: systemPrompt,
-          stream: false,
+          stream: true,
         }),
         signal: chatController.signal,
       })
@@ -228,39 +228,41 @@ Deno.serve(async (req) => {
       )
     }
 
-    const rawText = await response.text()
-    let fullContent = ''
+    // 流式透传：直接将智谱 AI 的 SSE 流返回给前端
+    // 同时在流结束后注入 rag_used 信息
+    const ragUsed = ragContext.length > 0
 
-    if (rawText.trim().startsWith('data:')) {
-      const lines = rawText.split('\n')
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (!trimmed.startsWith('data:')) continue
-        const jsonStr = trimmed.slice(5).trim()
-        if (jsonStr === '[DONE]') break
-        try {
-          const chunk = JSON.parse(jsonStr)
-          const delta = chunk?.choices?.[0]?.delta?.content
-            || chunk?.choices?.[0]?.message?.content
-            || ''
-          fullContent += delta
-        } catch { /* 跳过无效 chunk */ }
-      }
-    } else {
+    // 将原始流转换，在末尾追加 rag_used 信息
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const encoder = new TextEncoder()
+
+    ;(async () => {
       try {
-        const respData = JSON.parse(rawText)
-        fullContent = respData?.choices?.[0]?.message?.content
-          || respData?.choices?.[0]?.delta?.content
-          || ''
-      } catch {
-        fullContent = ''
+        const reader = response.body!.getReader()
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          await writer.write(value)
+        }
+        // 流结束后追加 rag_used 元数据
+        await writer.write(encoder.encode(`data: {"rag_used":${ragUsed}}\n\n`))
+        await writer.write(encoder.encode('data: [DONE]\n\n'))
+      } catch (e) {
+        console.error('流式传输错误:', e)
+      } finally {
+        await writer.close()
       }
-    }
+    })()
 
-    return new Response(
-      JSON.stringify({ content: fullContent, rag_used: ragContext.length > 0 }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return new Response(readable, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    })
   } catch (error) {
     console.error('法律咨询错误:', error)
     return new Response(
