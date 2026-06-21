@@ -292,10 +292,13 @@ export default function Chat() {
                 // 实时更新消息内容
                 setMessages(prev => {
                   const updated = [...prev]
+                  const last = updated[updated.length - 1]
                   updated[updated.length - 1] = {
-                    ...updated[updated.length - 1],
+                    ...last,
                     content: fullContent,
                     ragUsed,
+                    // 保留已有的 historyId，不覆盖
+                    historyId: last.historyId,
                   }
                   return updated
                 })
@@ -307,18 +310,19 @@ export default function Chat() {
         // 流结束后保存历史和日志
         const responseTimeMs = Date.now() - startTime
         if (user && fullContent) {
-          saveConsultHistory(user.id, text.trim(), fullContent, ragUsed, responseTimeMs).then(({ id }) => {
-            if (id) {
+          try {
+            const { id: historyId } = await saveConsultHistory(user.id, text.trim(), fullContent, ragUsed, responseTimeMs)
+            if (historyId) {
               setMessages(prev => {
                 const updated = [...prev]
                 updated[updated.length - 1] = {
                   ...updated[updated.length - 1],
-                  historyId: id,
+                  historyId,
                 }
                 return updated
               })
             }
-          }).catch(() => {})
+          } catch {}
           logAiCall({
             userId: user.id,
             functionName: 'legal-chat',
@@ -363,18 +367,19 @@ export default function Chat() {
       }
       setMessages([...newMessages, assistantMsg])
       if (user) {
-        saveConsultHistory(user.id, text.trim(), aiContent, ragUsed, responseTimeMs).then(({ id }) => {
-          if (id) {
+        try {
+          const { id: historyId } = await saveConsultHistory(user.id, text.trim(), aiContent, ragUsed, responseTimeMs)
+          if (historyId) {
             setMessages(prev => {
               const updated = [...prev]
               updated[updated.length - 1] = {
                 ...updated[updated.length - 1],
-                historyId: id,
+                historyId,
               }
               return updated
             })
           }
-        }).catch(() => {})
+        } catch {}
         logAiCall({
           userId: user.id,
           functionName: 'legal-chat',
