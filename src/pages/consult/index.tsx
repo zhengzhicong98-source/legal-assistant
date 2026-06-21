@@ -311,7 +311,8 @@ export default function Chat() {
         const responseTimeMs = Date.now() - startTime
         if (user && fullContent) {
           try {
-            const { id: historyId } = await saveConsultHistory(user.id, text.trim(), fullContent, ragUsed, responseTimeMs)
+            const { id: historyId, error: saveError } = await saveConsultHistory(user.id, text.trim(), fullContent, ragUsed, responseTimeMs)
+            console.log('[debug] saveConsultHistory result:', historyId, saveError)
             if (historyId) {
               setMessages(prev => {
                 const updated = [...prev]
