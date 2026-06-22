@@ -58,6 +58,20 @@ export default function Login() {
       Taro.showToast({ title: '用户名仅限字母、数字、下划线（3-20位）', icon: 'none' })
       return
     }
+    // BUG FIX 2026/06/22: 增强密码强度验证
+    if (isRegister) {
+      if (password.length < 8) {
+        Taro.showToast({ title: '密码至少需要8位', icon: 'none' })
+        return
+      }
+      // 检查密码是否包含至少一个字母和一个数字
+      const hasLetter = /[a-zA-Z]/.test(password)
+      const hasNumber = /[0-9]/.test(password)
+      if (!hasLetter || !hasNumber) {
+        Taro.showToast({ title: '密码需包含字母和数字', icon: 'none' })
+        return
+      }
+    }
     setLoading(true)
     const fn = isRegister ? signUpWithUsername : signInWithUsername
     const { error } = await fn(username.trim(), password)
@@ -130,7 +144,7 @@ export default function Login() {
               <input
                 type="password"
                 className="w-full text-xl text-foreground bg-transparent outline-none"
-                placeholder="密码（至少6位）"
+                placeholder={isRegister ? "密码（至少8位，含字母和数字）" : "密码"}
                 value={password}
                 onInput={e => { const ev = e as any; setPassword(ev.detail?.value ?? ev.target?.value ?? '') }}
                 maxLength={32}

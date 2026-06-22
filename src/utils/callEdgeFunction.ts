@@ -32,11 +32,13 @@ export function callEdgeFunction<T = unknown>(
     'apikey': anonKey,
     ...headers,
   }
-  const reqBody = body !== undefined ? JSON.stringify(body) : undefined
+  // BUG FIX 2026/06/22: 修复双重序列化问题，H5 用 JSON 字符串，微信小程序用原始对象
+  const reqBodyForFetch = body !== undefined ? JSON.stringify(body) : undefined;
+  const reqBodyForTaro = body; // Taro.request 会自动序列化，不需要手动 JSON.stringify
 
   // H5（浏览器）环境：直接用原生 fetch，避免 Taro.request 在 H5 下 fail 回调异常
   if (Taro.getEnv() === Taro.ENV_TYPE.WEB) {
-    return fetch(url, { method, headers: reqHeaders, body: reqBody })
+    return fetch(url, { method, headers: reqHeaders, body: reqBodyForFetch })
       .then(async (res) => {
         const parsed = await res.json().catch(() => null)
         if (res.ok) return { data: parsed as T, error: null }
@@ -57,7 +59,7 @@ export function callEdgeFunction<T = unknown>(
       url,
       method,
       header: reqHeaders,
-      data: reqBody,
+      data: reqBodyForTaro,
       timeout: 30000, // 30 秒超时
       success(res) {
         const parsed = typeof res.data === 'string'

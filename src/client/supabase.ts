@@ -29,11 +29,23 @@ export const customFetch: typeof fetch = async (url: string, options: RequestIni
   }
 
   return new Promise((resolve) => {
+    // BUG FIX 2026/06/22: 修复请求体序列化问题，将 JSON 字符串解析为对象，因为 Taro.request 会自动序列化 data
+    let requestData;
+    if (typeof body === 'string') {
+      try {
+        requestData = JSON.parse(body);
+      } catch {
+        requestData = body;
+      }
+    } else {
+      requestData = body;
+    }
+
     Taro.request({
       url,
       method: method as keyof Taro.request.Method,
       header: headers,
-      data: body,
+      data: requestData,
       responseType: 'text',
       timeout: 30000,
       success(res) {

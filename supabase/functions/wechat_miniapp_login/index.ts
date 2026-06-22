@@ -28,6 +28,14 @@ Deno.serve(async (req) => {
     const APP_ID = Deno.env.get('WECHAT_MINIPROGRAM_LOGIN_APP_ID')
     const APP_SECRET = Deno.env.get('WECHAT_MINIPROGRAM_LOGIN_APP_SECRET')
 
+    // BUG FIX 2026/06/22: 添加环境变量缺失检查
+    if (!APP_ID || !APP_SECRET) {
+      return new Response(JSON.stringify({ message: '微信小程序配置缺失，请联系管理员' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      })
+    }
+
     const wxRes = await fetch(
       `https://api.weixin.qq.com/sns/jscode2session?appid=${APP_ID}&secret=${APP_SECRET}&js_code=${code}&grant_type=authorization_code`
     )
