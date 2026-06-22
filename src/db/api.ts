@@ -366,8 +366,8 @@ export async function getConsultStats(userId: string) {
   const total = data?.length || 0
   const positive = data?.filter(d => d.feedback === 1).length || 0
   const negative = data?.filter(d => d.feedback === -1).length || 0
-  const avgResponseTime = data?.reduce((sum, d) => sum + (d.response_time_ms || 0), 0) / (total || 1)
-  const ragHitRate = data?.filter(d => d.rag_used).length / (total || 1)
+  const avgResponseTime = data ? data.reduce((sum, d) => sum + (d.response_time_ms || 0), 0) / (total || 1) : 0
+  const ragHitRate = data ? data.filter(d => d.rag_used).length / (total || 1) : 0
 
   return { total, positive, negative, avgResponseTime: Math.round(avgResponseTime), ragHitRate }
 }
@@ -384,10 +384,10 @@ export async function getAdminStats() {
   const negative = consultData?.filter(d => d.feedback === -1).length || 0
   const feedbackTotal = positive + negative
   const avgResponseTime = total > 0
-    ? Math.round(consultData?.reduce((sum, d) => sum + (d.response_time_ms || 0), 0) / total)
+    ? (consultData ? Math.round(consultData.reduce((sum, d) => sum + (d.response_time_ms || 0), 0) / total) : 0)
     : 0
   const ragHitRate = total > 0
-    ? consultData?.filter(d => d.rag_used).length / total
+    ? (consultData ? consultData.filter(d => d.rag_used).length / total : 0)
     : 0
 
   return {
