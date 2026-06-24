@@ -217,6 +217,7 @@ export default function Chat() {
   /** 搜索模式：普通咨询 | 联网搜索 */
   const [searchMode, setSearchMode] = useState<'chat' | 'search'>('chat')
   const voiceRecognitionRef = useRef<any>(null)
+  const messagesRef = useRef<ChatMessage[]>([])
 
   // 清理：组件卸载时停止语音识别
   useEffect(() => () => { voiceRecognitionRef.current?.abort() }, [])
@@ -230,11 +231,15 @@ export default function Chat() {
     }
   }, [])
 
+  // 同步 ref，避免闭包陈旧问题
+  useEffect(() => { messagesRef.current = messages }, [messages])
+
   /** 普通咨询（调用 legal-chat） */
   const sendChatMessage = useCallback(async (text: string) => {
     if (!text.trim() || loading) return
     const userMsg: ChatMessage = { role: 'user', content: text.trim(), timestamp: Date.now() }
-    const newMessages = [...messages, userMsg]
+    const currentMessages = messagesRef.current
+    const newMessages = [...currentMessages, userMsg]
     setMessages(newMessages)
     setInput('')
     setLoading(true)
@@ -417,7 +422,7 @@ export default function Chat() {
   const sendSearchMessage = useCallback(async (text: string) => {
     if (!text.trim() || loading) return
     const userMsg: ChatMessage = { role: 'user', content: text.trim(), timestamp: Date.now() }
-    const newMessages = [...messages, userMsg]
+    const newMessages = [...messagesRef.current, userMsg]
     setMessages(newMessages)
     setInput('')
     setLoading(true)

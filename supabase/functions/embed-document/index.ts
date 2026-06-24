@@ -5,29 +5,36 @@ const EMBED_API = 'https://open.bigmodel.cn/api/paas/v4/embeddings'
 
 /** 调用 Embedding API 获取文本向量 */
 async function getEmbedding(text: string, apiKey: string): Promise<number[]> {
-  const response = await fetch(EMBED_API, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'embedding-3',
-      input: text,
-    }),
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000) // 15s 超时
+  try {
+    const response = await fetch(EMBED_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'embedding-3',
+        input: text,
+      }),
+      signal: controller.signal,
+    })
 
-  if (!response.ok) {
-    const errText = await response.text()
-    throw new Error(`Embedding API 错误: ${response.status} ${errText}`)
-  }
+    if (!response.ok) {
+      const errText = await response.text()
+      throw new Error(`Embedding API 错误: ${response.status} ${errText}`)
+    }
 
-  const data = await response.json()
-  const embedding = data?.data?.[0]?.embedding
-  if (!Array.isArray(embedding)) {
-    throw new Error('Embedding API 返回格式异常')
+    const data = await response.json()
+    const embedding = data?.data?.[0]?.embedding
+    if (!Array.isArray(embedding)) {
+      throw new Error('Embedding API 返回格式异常')
+    }
+    return embedding
+  } finally {
+    clearTimeout(timer)
   }
-  return embedding
 }
 
 Deno.serve(async (req) => {

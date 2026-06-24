@@ -476,7 +476,8 @@ export default function Rights() {
       }
     }
     autoLocate()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- callEdgeFunction/getCitiesByProvince/getRightsCenters are stable imports
+  }, [])
 
   const handleProvinceChange = useCallback(async (province: string) => {
     setSelectedProvince(province)

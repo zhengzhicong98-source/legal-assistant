@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Taro, { useShareAppMessage, useShareTimeline, useReachBottom, usePullDownRefresh } from '@tarojs/taro'
 import { getCasePosts } from '@/db/api'
 import type { CasePost, CaseCategory } from '@/db/types'
@@ -55,10 +55,11 @@ export default function Plaza() {
   const [refreshing, setRefreshing] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [offset, setOffset] = useState(0)
+  const offsetRef = useRef(0) // 避免 fetchPosts 因 offset 变化频繁重建
   const PAGE_SIZE = 10
 
   const fetchPosts = useCallback(async (isRefresh = false) => {
-    const currentOffset = isRefresh ? 0 : offset
+    const currentOffset = isRefresh ? 0 : offsetRef.current
     const sort: 'latest' | 'hottest' = activeTab === 'hottest' ? 'hottest' : 'latest'
     const category: CaseCategory | '全部' = ['租房', '劳动', '消费'].includes(activeTab)
       ? (activeTab as CaseCategory)
@@ -69,15 +70,17 @@ export default function Plaza() {
 
     if (isRefresh) {
       setPosts(data)
+      offsetRef.current = PAGE_SIZE
       setOffset(PAGE_SIZE)
     } else {
       setPosts(prev => [...prev, ...data])
+      offsetRef.current = currentOffset + PAGE_SIZE
       setOffset(currentOffset + PAGE_SIZE)
     }
     setHasMore(data.length === PAGE_SIZE)
     setLoading(false)
     setRefreshing(false)
-  }, [activeTab, offset])
+  }, [activeTab])
 
   useEffect(() => {
     setPosts([])

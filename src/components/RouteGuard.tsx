@@ -22,24 +22,20 @@ function isTabBarPage(path: string): boolean {
   return tabBarPages.some((tabBarPath) => path?.includes(tabBarPath))
 }
 
-// Throttled navigation to prevent duplicate redirects
+// Rate-limit navigation to prevent duplicate redirects (component-lifetime ref)
 let isNavigating = false
+let navTimer: ReturnType<typeof setTimeout> | null = null
 function navigateToLogin(currentPath: string): void {
-  if (isNavigating) {
-    return
-  }
+  if (isNavigating) return
 
   isNavigating = true
+  if (navTimer) clearTimeout(navTimer)
 
-  // Save current path for redirect after login
   Taro.setStorageSync(STORAGE_KEY_REDIRECT_PATH, currentPath)
   const navigateMethod = isTabBarPage(currentPath) ? Taro.navigateTo : Taro.redirectTo
   navigateMethod({url: LOGIN_PAGE_PATH})
 
-  // Reset flag after 100ms
-  setTimeout(() => {
-    isNavigating = false
-  }, 100)
+  navTimer = setTimeout(() => { isNavigating = false; navTimer = null }, 500)
 }
 
 /**

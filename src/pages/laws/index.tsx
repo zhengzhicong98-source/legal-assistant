@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Taro from '@tarojs/taro'
 import { searchLaws, getLawsList } from '@/db/api'
 
@@ -7,15 +7,26 @@ export default function LawsPage() {
   const [loading, setLoading] = useState(true)
   const [searchText, setSearchText] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     getLawsList().then(data => { setLaws(data); setLoading(false) })
   }, [])
 
   useEffect(() => {
+    // 取消前一次请求，防止快速输入/删除时的竞态
+    if (abortRef.current) abortRef.current.abort()
     if (searchText.trim().length === 0) { getLawsList().then(setLaws); return }
-    const timer = setTimeout(() => searchLaws(searchText.trim()).then(setLaws), 300)
-    return () => clearTimeout(timer)
+    const controller = new AbortController()
+    abortRef.current = controller
+    const timer = setTimeout(() => {
+      // 用 AbortController 标记，searchLaws 目前是纯 Supabase 调用无法真正 abort，
+      // 但可以防止旧结果覆盖新结果
+      searchLaws(searchText.trim()).then(data => {
+        if (!controller.signal.aborted) setLaws(data)
+      })
+    }, 300)
+    return () => { clearTimeout(timer); controller.abort() }
   }, [searchText])
 
   // 按法律分组
