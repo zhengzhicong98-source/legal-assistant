@@ -17,7 +17,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   const {data, error} = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
 
   if (error) {
-    console.error('Failed to fetch user profile:', error)
+    console.error('[auth] Failed to fetch profile, code:', (error as any)?.code || 'unknown')
     return null
   }
   return data
@@ -65,7 +65,7 @@ export function AuthProvider({children}: {children: ReactNode}) {
         setLoading(false)
       })
       .catch((error) => {
-        console.warn('Failed to get session:', error)
+        console.warn('[auth] Failed to get session:', (error as any)?.code || 'unknown')
         setUser(null)
         setProfile(null)
         setLoading(false)

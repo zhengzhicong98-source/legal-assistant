@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS rights_timeline (
   case_id uuid REFERENCES rights_cases(id) ON DELETE CASCADE,
   title text NOT NULL,
   content text,
-  node_date date DEFAULT now(),
+  node_date date DEFAULT CURRENT_DATE,
   is_completed boolean DEFAULT false,
   created_at timestamptz DEFAULT now()
 );

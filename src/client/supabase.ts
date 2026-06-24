@@ -1,11 +1,13 @@
-// @ts-nocheck
-
 import {createClient} from '@supabase/supabase-js'
 import Taro, {showToast} from '@tarojs/taro'
 
 const supabaseUrl: string = process.env.TARO_APP_SUPABASE_URL!
-const supabaseAnonKey: string = process.env.TARO_APP_SUPABASE_ANON_KEY || 'TOKEN'
-const appId: string = process.env.TARO_APP_APP_ID!
+const supabaseAnonKey: string = process.env.TARO_APP_SUPABASE_ANON_KEY || ''
+const appId: string = process.env.TARO_APP_APP_ID || ''
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('[supabase] 缺少 TARO_APP_SUPABASE_URL 或 TARO_APP_SUPABASE_ANON_KEY 环境变量')
+}
 
 let noticed = false
 
@@ -87,6 +89,7 @@ export const customFetch: typeof fetch = async (url: string, options: RequestIni
               return null
             }
           }
+        // @ts-expect-error Taro.request 返回结构与标准 Response 不完全兼容
         } as unknown as Response)
       },
       fail(err) {
@@ -98,6 +101,7 @@ export const customFetch: typeof fetch = async (url: string, options: RequestIni
           text: async () => JSON.stringify({ error: err.errMsg }),
           data: null,
           headers: { get: () => null }
+        // @ts-expect-error Taro.request 返回结构与标准 Response 不完全兼容
         } as unknown as Response)
       },
     })

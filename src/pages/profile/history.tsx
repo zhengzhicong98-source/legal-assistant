@@ -26,7 +26,6 @@ function buildExportText(records: ConsultHistory[]): string {
 function HistoryPage() {
   const { user } = useAuth()
   const [records, setRecords] = useState<ConsultHistory[]>([])
-  const [allRecords, setAllRecords] = useState<ConsultHistory[]>([]) // 全量用于导出
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -51,10 +50,12 @@ function HistoryPage() {
 
   useEffect(() => { loadData(true) }, [user])
 
-  // 加载全量记录用于导出
-  useEffect(() => {
+  // 导出时才加载全量记录（避免每次挂载 200 条查询）
+  const loadAllForExport = useCallback(async () => {
     if (!user) return
-    getConsultHistory(user.id, 200, 0).then(setAllRecords)
+    const data = await getConsultHistory(user.id, 200, 0)
+    setAllRecords(data)
+    return data
   }, [user])
 
   useReachBottom(() => {
@@ -72,7 +73,6 @@ function HistoryPage() {
         const ok = await deleteConsultHistory(id)
         if (ok) {
           setRecords(prev => prev.filter(r => r.id !== id))
-          setAllRecords(prev => prev.filter(r => r.id !== id))
           Taro.showToast({ title: '已删除', icon: 'success' })
         }
       },
@@ -80,13 +80,14 @@ function HistoryPage() {
   }
 
   const handleExport = async () => {
-    if (allRecords.length === 0) {
-      Taro.showToast({ title: '暂无记录可导出', icon: 'none' })
-      return
-    }
     setExporting(true)
     try {
-      const text = buildExportText(allRecords)
+      const records = await loadAllForExport()
+      if (!records || records.length === 0) {
+        Taro.showToast({ title: '暂无记录可导出', icon: 'none' })
+        return
+      }
+      const text = buildExportText(records)
       if (Taro.getEnv() === Taro.ENV_TYPE.WEB) {
         // H5: 下载为文本文件
         const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
@@ -117,7 +118,7 @@ function HistoryPage() {
           <div className="i-mdi-arrow-left text-2xl text-foreground" onClick={() => Taro.navigateBack()} />
           <span className="text-2xl font-semibold text-foreground">我的咨询记录</span>
         </div>
-        {allRecords.length > 0 && (
+        {records.length > 0 && (
           <button type="button"
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-secondary text-primary text-xl"
             onClick={handleExport}

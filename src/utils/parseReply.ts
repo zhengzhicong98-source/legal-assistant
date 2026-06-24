@@ -32,7 +32,7 @@ export function parseReply(content: string): ParsedReply {
     : []
 
   const suggestions = suggestMatch
-    ? suggestMatch[1].trim().split('\n').map(s => s.trim()).filter(s => s.length > 0 && s.length < 60)
+    ? suggestMatch[1].trim().split('\n').map(s => s.trim()).filter(s => s.length > 0 && s.length < 80)
     : []
 
   return {

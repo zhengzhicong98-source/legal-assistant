@@ -342,7 +342,7 @@ export default function Chat() {
                 return updated
               })
             }
-          } catch {}
+          } catch { console.error('[consult] save history failed') }
           logAiCall({
             userId: user.id,
             functionName: 'legal-chat',
@@ -401,7 +401,7 @@ export default function Chat() {
               return updated
             })
           }
-        } catch {}
+        } catch { console.error('[consult] save history failed (weapp)') }
         logAiCall({
           userId: user.id,
           functionName: 'legal-chat',
