@@ -1,4 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts'
+import { ok, err, handleOptions, logRequest } from '../_shared/response.ts'
 
 const MULTIMODAL_API = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
 
@@ -36,27 +37,18 @@ const SYSTEM_PROMPT = `你是一位深耕中国劳动法与民法典的资深律
 如合同图片内容不清晰无法识别，在summary中说明并提示用户重新上传清晰图片，risks数组可为空，score给50。`
 
 Deno.serve(async (req) => {
-  // 处理CORS预检请求
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return handleOptions()
 
   try {
+    logRequest(req, 'contract-review')
+
     const apiKey = Deno.env.get('INTEGRATIONS_API_KEY')
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: '服务配置错误，请联系管理员' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    if (!apiKey) return err('服务配置错误，请联系管理员', 500)
 
     const { image_url, image_base64, image_urls, file_name } = await req.json()
 
     if (!image_url && !image_base64 && (!image_urls || image_urls.length === 0)) {
-      return new Response(
-        JSON.stringify({ error: '请提供合同图片' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return err('请提供合同图片', 400)
     }
 
     // 构建图片内容（支持多文件）
@@ -99,23 +91,10 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       const errText = await response.text()
-      console.error('文心API错误:', errText)
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: '请求过于频繁，请稍后再试' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'API余额不足，请联系管理员' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      return new Response(
-        JSON.stringify({ error: 'AI服务暂时不可用，请稍后再试' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      console.error('[contract-review] API错误:', errText)
+      if (response.status === 429) return err('请求过于频繁，请稍后再试', 429)
+      if (response.status === 402) return err('API余额不足，请联系管理员', 402)
+      return err('AI服务暂时不可用，请稍后再试', 500)
     }
 
     // 收集流式响应
@@ -162,15 +141,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ result: reviewResult }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return ok({ result: reviewResult })
   } catch (error) {
-    console.error('合同审查错误:', error)
-    return new Response(
-      JSON.stringify({ error: '服务异常，请稍后重试' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('[contract-review] 错误:', error)
+    return err('服务异常，请稍后重试', 500)
   }
 })

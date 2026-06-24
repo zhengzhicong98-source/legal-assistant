@@ -14,7 +14,8 @@
     "dev:h5": "taro build --type h5 --watch",
     "dev:weapp": "taro build --type weapp --watch",
     "build": "echo '[error] build requires a real Taro runtime. Use build:weapp or build:h5.' && exit 1",
-    "test": "echo '[warn] No tests configured yet. Add vitest + react-testing-library tests.' && exit 0",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "build:weapp": "taro build --type weapp",
     "build:h5": "taro build --type h5",
     "postinstall": "weapp-tw patch",
@@ -68,7 +69,10 @@
     "@types/react": "^18.3.24",
     "@typescript/native-preview": "7.0.0-dev.20260303.1",
     "@vitejs/plugin-react": "^4.7.0",
+    "@vitest/coverage-v8": "1.6.0",
+    "autoprefixer": "^10.5.0",
     "babel-preset-taro": "4.1.10",
+    "happy-dom": "^20.10.6",
     "miaoda-taro-plugin-html": "4.1.10-2",
     "oxc-parser": "^0.116.0",
     "oxc-resolver": "^11.19.1",
@@ -81,6 +85,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^4.5.14",
+    "vitest": "1.6.0",
     "weapp-tailwindcss": "^4.9.4"
   },
   "resolutions": {

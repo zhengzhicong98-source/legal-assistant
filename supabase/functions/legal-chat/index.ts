@@ -1,5 +1,6 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+import { ok, err, handleOptions, logRequest } from '../_shared/response.ts'
 
 const TEXT_API = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
 const EMBED_API = 'https://open.bigmodel.cn/api/paas/v4/embeddings'
@@ -128,28 +129,20 @@ const DISPUTE_SYSTEM_PROMPT = `你是一位专业的法律博弈策略顾问，�
 【防幻觉规则】引用的所有法律依据必须真实存在于中国现行法律体系中，严禁编造条文编号或条文内容。`
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return handleOptions()
 
   try {
-    const apiKey = Deno.env.get('INTEGRATIONS_API_KEY')
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: '服务配置错误，请联系管理员' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    logRequest(req, 'legal-chat')
 
-    const { messages, mode, stream: streamReq } = await req.json()
-    // stream 默认 false：小程序端按 JSON 读取 content；H5 端显式传 stream:true 走 SSE 流
+    const apiKey = Deno.env.get('INTEGRATIONS_API_KEY')
+    if (!apiKey) return err('服务配置错误，请联系管理员', 500)
+
+    const body = await req.json()
+    const { messages, mode, stream: streamReq } = body
     const useStream = streamReq === true
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: '请提供对话消息' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return err('请提供对话消息', 400)
     }
 
     // 仅在法律咨询模式下执行 RAG 检索
@@ -208,35 +201,12 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       const errText = await response.text()
-      console.error(`文本API错误 [${response.status}]:`, errText)
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: '请求过于频繁，请稍后再试' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      if (response.status === 401 || response.status === 403) {
-        return new Response(
-          JSON.stringify({ error: 'API密钥无效，请联系管理员' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'API余额不足，请联系管理员' }),
-          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      if (response.status === 400) {
-        return new Response(
-          JSON.stringify({ error: '请求参数错误，请检查输入内容' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      return new Response(
-        JSON.stringify({ error: 'AI服务暂时不可用，请稍后再试' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      console.error(`[legal-chat] 文本API错误 [${response.status}]:`, errText)
+      if (response.status === 429) return err('请求过于频繁，请稍后再试', 429)
+      if (response.status === 401 || response.status === 403) return err('API密钥无效，请联系管理员', 500)
+      if (response.status === 402) return err('API余额不足，请联系管理员', 402)
+      if (response.status === 400) return err('请求参数错误，请检查输入内容', 400)
+      return err('AI服务暂时不可用，请稍后再试', 500)
     }
 
     const ragUsed = ragContext.length > 0
@@ -245,10 +215,7 @@ Deno.serve(async (req) => {
     if (!useStream) {
       const result = await response.json()
       const content = result?.choices?.[0]?.message?.content ?? ''
-      return new Response(
-        JSON.stringify({ content, rag_used: ragUsed, legal_refs: legalRefs }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return ok({ content, rag_used: ragUsed, legal_refs: legalRefs })
     }
 
     // 流式透传：直接将智谱 AI 的 SSE 流返回给前端
@@ -286,10 +253,7 @@ Deno.serve(async (req) => {
       },
     })
   } catch (error) {
-    console.error('法律咨询错误:', error)
-    return new Response(
-      JSON.stringify({ error: '服务异常，请稍后重试' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('[legal-chat] 错误:', error)
+    return err('服务异常，请稍后重试', 500)
   }
 })

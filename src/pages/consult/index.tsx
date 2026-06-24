@@ -3,6 +3,7 @@ import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { callEdgeFunction } from '@/utils/callEdgeFunction'
 import { recordQuestion, saveConsultHistory, logAiCall, submitFeedback, saveLaw } from '@/db/api'
 import { useAuth } from '@/contexts/AuthContext'
+import { parseReply } from '@/utils/parseReply'
 import type { ChatMessage } from '@/db/types'
 
 const QUICK_QUESTIONS = [
@@ -11,42 +12,6 @@ const QUICK_QUESTIONS = [
   '租房合同提前解除怎么处理？',
   '公司不签劳动合同违法吗？',
 ]
-
-// 解析AI回复的结构化内容
-function parseReply(content: string) {
-  const lawMatch = content.match(/---法律依据---([\s\S]*?)(?=---|$)/)
-  const translateMatch = content.match(/---学长翻译官---([\s\S]*?)(?=---|$)/)
-  const speechMatch = content.match(/---话术模板---([\s\S]*?)(?=---|$)/)
-  const channelMatch = content.match(/---投诉渠道---([\s\S]*?)(?=---|$)/)
-  const citationMatch = content.match(/---信源引用---([\s\S]*?)(?=---|$)/)
-  const suggestMatch = content.match(/---追问建议---([\s\S]*?)$/)
-
-  const mainContent = content
-    .split('---法律依据---')[0]
-    .replace('[结论与分析]', '')
-    .trim()
-
-  // 解析信源引用：每行一条（以•开头），过滤空行
-  const citationRaw = citationMatch ? citationMatch[1].trim() : ''
-  const citations = citationRaw
-    ? citationRaw.split('\n').map(s => s.trim()).filter(s => s.length > 0)
-    : []
-
-  // 解析追问建议：每行一个问题，过滤空行
-  const suggestions = suggestMatch
-    ? suggestMatch[1].trim().split('\n').map(s => s.trim()).filter(s => s.length > 0 && s.length < 60)
-    : []
-
-  return {
-    main: mainContent,
-    law: lawMatch ? lawMatch[1].trim() : '',
-    translate: translateMatch ? translateMatch[1].trim() : '',
-    speech: speechMatch ? speechMatch[1].trim() : '',
-    channel: channelMatch ? channelMatch[1].trim() : '',
-    citations,
-    suggestions: suggestions.slice(0, 3),
-  }
-}
 
 const DISCLAIMER = '本回复由AI生成，仅供参考，不构成正式法律建议。若情况紧急请咨询专业律师。'
 

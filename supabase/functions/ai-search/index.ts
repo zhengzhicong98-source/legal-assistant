@@ -1,4 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts'
+import { ok, err, handleOptions, logRequest } from '../_shared/response.ts'
 
 const AI_SEARCH_API = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
 
@@ -12,25 +13,17 @@ interface Reference {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return handleOptions()
 
   try {
+    logRequest(req, 'ai-search')
+
     const apiKey = Deno.env.get('INTEGRATIONS_API_KEY')
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: '服务配置错误' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    if (!apiKey) return err('服务配置错误', 500)
 
     const { query } = await req.json()
     if (!query || !String(query).trim()) {
-      return new Response(
-        JSON.stringify({ error: '搜索内容不能为空' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return err('搜索内容不能为空', 400)
     }
 
     // 在查询前加法律背景，提升搜索质量
@@ -55,10 +48,10 @@ Deno.serve(async (req) => {
 
     if (!resp.ok) {
       const errText = await resp.text()
-      if (resp.status === 429) return new Response(JSON.stringify({ error: '请求过于频繁，请稍后再试' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-      if (resp.status === 402) return new Response(JSON.stringify({ error: 'API余额不足，请联系管理员' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-      console.error('百度AI搜索 API 错误:', errText)
-      return new Response(JSON.stringify({ error: 'AI搜索服务暂时不可用，请稍后再试' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      console.error('[ai-search] API错误:', errText)
+      if (resp.status === 429) return err('请求过于频繁，请稍后再试', 429)
+      if (resp.status === 402) return err('API余额不足，请联系管理员', 402)
+      return err('AI搜索服务暂时不可用，请稍后再试', 500)
     }
 
     // 收集 SSE 流式响应
@@ -97,16 +90,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ content: fullContent, references }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return ok({ content: fullContent, references })
 
   } catch (err) {
-    console.error('ai-search 错误:', err)
-    return new Response(
-      JSON.stringify({ error: '搜索服务异常，请稍后重试' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error('[ai-search] 错误:', err)
+    return err('搜索服务异常，请稍后重试', 500)
   }
 })
