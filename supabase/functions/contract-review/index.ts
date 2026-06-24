@@ -36,6 +36,29 @@ const SYSTEM_PROMPT = `你是一位深耕中国劳动法与民法典的资深律
 
 如合同图片内容不清晰无法识别，在summary中说明并提示用户重新上传清晰图片，risks数组可为空，score给50。`
 
+const COMPARE_PROMPT = `你是一位深耕中国劳动法与民法典的资深律师，专门为大学生提供合同对比审查服务。
+
+现在有两份合同（合同A 和 合同B），请对比分析差异，按以下JSON格式输出（只输出JSON）：
+{
+  "summary": "两份合同的整体差异评价（2-3句话）",
+  "risk_level": "高风险|中风险|低风险",
+  "score": 85,
+  "differences": [
+    {
+      "field": "涉及条款/事项",
+      "contract_a": "合同A的约定",
+      "contract_b": "合同B的约定",
+      "advantage": "A更有利|B更有利|无明显差异",
+      "analysis": "差异的法律含义及建议"
+    }
+  ],
+  "risks_a": [{"clause": "条款原文", "risk_level": "高风险|中风险|低风险", "description": "风险说明", "suggestion": "建议"}],
+  "risks_b": [{"clause": "条款原文", "risk_level": "高风险|中风险|低风险", "description": "风险说明", "suggestion": "建议"}],
+  "advice": "综合建议：推荐选择哪份合同及理由"
+}
+
+重点对比维度：租金金额/押金条款、租期/续租、违约责任、解除条件、维修责任、争议解决方式。`
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return handleOptions()
 
@@ -45,14 +68,15 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get('INTEGRATIONS_API_KEY')
     if (!apiKey) return err('服务配置错误，请联系管理员', 500)
 
-    const { image_url, image_base64, image_urls, file_name } = await req.json()
+    const { image_url, image_base64, image_urls, file_name, mode, image_urls_b } = await req.json()
+    const isCompare = mode === 'compare'
 
     if (!image_url && !image_base64 && (!image_urls || image_urls.length === 0)) {
       return err('请提供合同图片', 400)
     }
 
-    // 构建图片内容（支持多文件）
-    const imageContents = []
+    // 构建图片内容
+    const imageContents: { type: string; image_url: { url: string } }[] = []
     if (image_base64) {
       imageContents.push({ type: 'image_url', image_url: { url: image_base64 } })
     } else if (image_url) {
@@ -63,18 +87,28 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 对比模式：加上合同B的图片
+    if (isCompare && image_urls_b && Array.isArray(image_urls_b)) {
+      for (const url of image_urls_b.slice(0, 5)) {
+        imageContents.push({ type: 'image_url', image_url: { url } })
+      }
+    }
+
     const fileCount = imageContents.length
-    const fileDesc = fileCount > 1 ? `${fileCount}份相关文件（需跨文档关联分析）` : (file_name || '合同文件')
+    const fileDesc = fileCount > 1 ? `${fileCount}份文件` : (file_name || '合同文件')
 
     const messages = [
       {
         role: 'system',
-        content: [{ type: 'text', text: SYSTEM_PROMPT }]
+        content: [{ type: 'text', text: isCompare ? COMPARE_PROMPT : SYSTEM_PROMPT }]
       },
       {
         role: 'user',
         content: [
-          { type: 'text', text: `请审查这份合同（文件名：${fileDesc}），识别其中的霸王条款和法律风险，按JSON格式输出结果。${fileCount > 1 ? '请重点识别多份文件之间的矛盾与关联风险。' : ''}` },
+          { type: 'text', text: isCompare
+            ? `请对比这两份合同（前面为合同A，后面为合同B），找出差异条款并按JSON格式输出结果。`
+            : `请审查这份合同（文件名：${fileDesc}），识别其中的霸王条款和法律风险，按JSON格式输出结果。${fileCount > 1 ? '请重点识别多份文件之间的矛盾与关联风险。' : ''}`
+          },
           ...imageContents
         ]
       }

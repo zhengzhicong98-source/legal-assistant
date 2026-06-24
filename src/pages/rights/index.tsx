@@ -5,11 +5,14 @@ import { getProvinces, getCitiesByProvince, getRightsCenters } from '@/db/api'
 import { callEdgeFunction } from '@/utils/callEdgeFunction'
 import type { RightsCenter } from '@/db/types'
 
-const TYPE_OPTIONS = ['全部', '劳动仲裁委', '消费者协会', '法律援助中心'] as const
+const TYPE_OPTIONS = ['全部', '劳动仲裁委', '消费者协会', '法律援助中心', '劳动监察大队', '市场监督管理局', '人民法院立案庭'] as const
 const TYPE_ICONS: Record<string, string> = {
   '劳动仲裁委': 'i-mdi-gavel',
   '消费者协会': 'i-mdi-shield-check-outline',
   '法律援助中心': 'i-mdi-scale-balance',
+  '劳动监察大队': 'i-mdi-bullhorn-outline',
+  '市场监督管理局': 'i-mdi-store-check-outline',
+  '人民法院立案庭': 'i-mdi-bank-outline',
 }
 
 const SCENARIOS = [

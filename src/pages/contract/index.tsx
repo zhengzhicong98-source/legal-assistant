@@ -81,7 +81,9 @@ export default function Contract() {
   }))
   useShareTimeline(() => ({ title: '合同审查 - 法律助手' }))
 
+  const [compareMode, setCompareMode] = useState(false)
   const [files, setFiles] = useState<UploadedFile[]>([])
+  const [filesB, setFilesB] = useState<UploadedFile[]>([])
   const [uploading, setUploading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [result, setResult] = useState<ContractReviewResult | null>(null)
@@ -89,7 +91,7 @@ export default function Contract() {
   const [filesDestroyed, setFilesDestroyed] = useState(false)
   const [blurDetected, setBlurDetected] = useState(false)
 
-  const handleSelectFiles = useCallback(async () => {
+  const handleSelectFiles = useCallback(async (target?: 'a' | 'b') => {
     try {
       const selectedFiles = await selectMediaFiles({ mediaType: ['image'], count: 5 })
       if (!selectedFiles || selectedFiles.length === 0) return
@@ -114,27 +116,36 @@ export default function Contract() {
         return
       }
 
-      setFiles(prev => [...prev, ...newFiles].slice(0, 5))
+      if (compareMode && target === 'b') {
+        setFilesB(prev => [...prev, ...newFiles].slice(0, 5))
+      } else {
+        setFiles(prev => [...prev, ...newFiles].slice(0, 5))
+      }
       setResult(null)
       setFilesDestroyed(false)
       setBlurDetected(false)
-      Taro.showToast({ title: `已上传${newFiles.length}个文件`, icon: 'success' })
+      Taro.showToast({ title: `已上传${newFiles.length}个文件${compareMode && target === 'b' ? '至合同B' : ''}`, icon: 'success' })
     } catch (err) {
       console.error('文件选择错误:', err)
       Taro.showToast({ title: '文件选择失败，请重试', icon: 'none' })
     } finally {
       setUploading(false)
     }
-  }, [])
+  }, [compareMode])
 
   const removeFile = (idx: number) => {
     setFiles(prev => prev.filter((_, i) => i !== idx))
     setResult(null)
   }
 
+  const removeFileB = (idx: number) => {
+    setFilesB(prev => prev.filter((_, i) => i !== idx))
+    setResult(null)
+  }
+
   const handleAnalyze = useCallback(async () => {
-    if (files.length === 0) {
-      Taro.showToast({ title: '请先上传合同文件', icon: 'none' })
+    if (files.length === 0 || (compareMode && filesB.length === 0)) {
+      Taro.showToast({ title: compareMode ? '请上传合同A和合同B' : '请先上传合同文件', icon: 'none' })
       return
     }
     setAnalyzing(true)
@@ -142,11 +153,16 @@ export default function Contract() {
     setBlurDetected(false)
     try {
       const imageUrls = files.map(f => f.url)
-      const body = imageUrls.length === 1
-        ? { image_url: imageUrls[0], file_name: files[0].name }
-        : { image_urls: imageUrls, file_name: `${files.length}份合同文件` }
+      let body: Record<string, unknown>
+      if (compareMode) {
+        body = { image_urls: imageUrls, image_urls_b: filesB.map(f => f.url), file_name: '合同A vs 合同B', mode: 'compare' }
+      } else if (imageUrls.length === 1) {
+        body = { image_url: imageUrls[0], file_name: files[0].name }
+      } else {
+        body = { image_urls: imageUrls, file_name: `${files.length}份合同文件` }
+      }
 
-      const { data, error } = await callEdgeFunction<{ result: ContractReviewResult }>('contract-review', { body })
+      const { data, error } = await callEdgeFunction<{ result: ContractReviewResult & { differences?: unknown[]; risks_a?: unknown[]; risks_b?: unknown[] } }>('contract-review', { body })
       if (error) {
         console.error('合同审查错误:', error.message)
         Taro.showToast({ title: '审查失败，请稍后重试', icon: 'none' })
@@ -174,7 +190,7 @@ export default function Contract() {
       })
 
       // 即时销毁：分析完成后删除云端文件
-      const storagePaths = files.map(f => f.storagePath).filter(Boolean)
+      const storagePaths = [...files.map(f => f.storagePath), ...(compareMode ? filesB.map(f => f.storagePath) : [])].filter(Boolean)
       if (storagePaths.length > 0) {
         await supabase.storage.from('contracts').remove(storagePaths)
         setFilesDestroyed(true)
@@ -184,7 +200,7 @@ export default function Contract() {
     } finally {
       setAnalyzing(false)
     }
-  }, [files])
+  }, [files, filesB, compareMode])
 
   const overallConfig = result ? RISK_CONFIG[result.risk_level] || RISK_CONFIG['低风险'] : null
   const score = result ? (result as any).score : undefined
@@ -225,10 +241,23 @@ export default function Contract() {
           <p className="text-xl text-primary leading-relaxed">所有图片分析完毕后立即销毁，不用于模型训练，请放心上传。</p>
         </div>
 
-        {/* 上传区域 */}
+        {/* 对比模式开关 */}
+        <div className="flex items-center justify-between px-4 py-3 bg-card rounded-2xl border border-border mb-4">
+          <div className="flex items-center gap-2">
+            <div className="i-mdi-compare-horizontal text-2xl text-primary" />
+            <span className="text-xl font-medium text-foreground">合同对比模式</span>
+            <span className="text-base text-muted-foreground">（同时审查并对比两份合同差异）</span>
+          </div>
+          <div className={`w-12 h-7 rounded-full transition-all flex items-center px-1 ${compareMode ? 'bg-primary' : 'bg-gray-300'}`}
+            onClick={() => { setCompareMode(!compareMode); setFiles([]); setFilesB([]); setResult(null) }}>
+            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${compareMode ? 'translate-x-5' : 'translate-x-0'}`} />
+          </div>
+        </div>
+
+        {/* 上传区域 - 合同A */}
         <div className="bg-card rounded-2xl p-4 mb-4 border border-border">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xl font-semibold text-foreground">上传合同文件</p>
+            <p className="text-xl font-semibold text-foreground">{compareMode ? '合同A' : '上传合同文件'}</p>
             <span className="text-xl text-muted-foreground">{files.length}/5</span>
           </div>
           <p className="text-xl text-muted-foreground mb-4">支持同时上传多份相关文件（如租房合同+物业规约+清单）</p>
@@ -254,7 +283,7 @@ export default function Contract() {
           {files.length === 0 && (
             <div
               className="border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center py-10 mb-3"
-              onClick={handleSelectFiles}
+              onClick={() => handleSelectFiles('a')}
             >
               <div className="i-mdi-cloud-upload-outline text-5xl text-muted-foreground mb-3" />
               <p className="text-xl text-muted-foreground">点击上传合同照片</p>
@@ -267,7 +296,7 @@ export default function Contract() {
                 type="button"
                 className="flex items-center justify-center leading-none gap-2 rounded-xl border border-primary bg-background"
                 style={{ opacity: uploading ? 0.5 : 1 }}
-                onClick={handleSelectFiles}
+                onClick={() => handleSelectFiles('a')}
               >
                 <div className="py-3 flex items-center gap-2">
                   {uploading ? (
@@ -279,25 +308,77 @@ export default function Contract() {
                 </div>
               </button>
             )}
+          </div>
+        </div>
 
-            {files.length > 0 && (
-              <button
-                type="button"
-                className="flex items-center justify-center leading-none gap-2 rounded-xl bg-primary"
-                style={{ opacity: analyzing || uploading ? 0.5 : 1 }}
-                onClick={handleAnalyze}
-              >
+        {/* 上传区域 - 合同B（仅对比模式） */}
+        {compareMode && (
+          <div className="bg-card rounded-2xl p-4 mb-4 border border-amber-200 bg-amber-50">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xl font-semibold text-foreground">合同B</p>
+              <span className="text-xl text-muted-foreground">{filesB.length}/5</span>
+            </div>
+            <p className="text-xl text-muted-foreground mb-4">上传需要对比的第二份合同</p>
+
+            {filesB.length > 0 && (
+              <div className="flex flex-col gap-2 mb-3">
+                {filesB.map((f, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-2 bg-white rounded-xl">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                      <Image src={f.preview} mode="aspectFill" className="w-full h-full" />
+                    </div>
+                    <p className="flex-1 text-xl text-foreground truncate">{f.name}</p>
+                    <div className="i-mdi-close-circle text-2xl text-muted-foreground" onClick={() => removeFileB(idx)} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {filesB.length === 0 && (
+              <div className="border-2 border-dashed border-amber-300 rounded-xl flex flex-col items-center justify-center py-10 mb-3"
+                onClick={() => handleSelectFiles('b')}>
+                <div className="i-mdi-cloud-upload-outline text-5xl text-muted-foreground mb-3" />
+                <p className="text-xl text-muted-foreground">点击上传合同B照片</p>
+              </div>
+            )}
+
+            {filesB.length < 5 && (
+              <button type="button"
+                className="flex items-center justify-center leading-none gap-2 rounded-xl border border-primary bg-background w-full"
+                style={{ opacity: uploading ? 0.5 : 1 }}
+                onClick={() => handleSelectFiles('b')}>
                 <div className="py-3 flex items-center gap-2">
-                  {analyzing ? (
-                    <div className="i-mdi-loading text-2xl text-primary-foreground animate-spin" />
+                  {uploading ? (
+                    <div className="i-mdi-loading text-2xl text-primary animate-spin" />
                   ) : (
-                    <div className="i-mdi-magnify text-2xl text-primary-foreground" />
+                    <div className="i-mdi-image-plus-outline text-2xl text-primary" />
                   )}
-                  <span className="text-xl text-primary-foreground">{analyzing ? 'AI分析中...' : `开始审查（${files.length}份文件）`}</span>
+                  <span className="text-xl text-primary">{uploading ? '上传中...' : '选择合同B文件'}</span>
                 </div>
               </button>
             )}
           </div>
+        )}
+
+        {/* 开始分析按钮（在A和B之下） */}
+        <div className="mb-4">
+          {(files.length > 0 || (compareMode && filesB.length > 0)) && (
+            <button type="button"
+              className="flex items-center justify-center leading-none gap-2 rounded-xl bg-primary w-full"
+              style={{ opacity: analyzing || uploading ? 0.5 : 1 }}
+              onClick={handleAnalyze}>
+              <div className="py-3 flex items-center gap-2">
+                {analyzing ? (
+                  <div className="i-mdi-loading text-2xl text-primary-foreground animate-spin" />
+                ) : (
+                  <div className="i-mdi-magnify text-2xl text-primary-foreground" />
+                )}
+                <span className="text-xl text-primary-foreground">
+                  {analyzing ? 'AI分析中...' : compareMode ? `开始对比（A:${files.length}份 B:${filesB.length}份）` : `开始审查（${files.length}份文件）`}
+                </span>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* 分析中骨架屏 */}
@@ -361,6 +442,28 @@ export default function Contract() {
                 </div>
               )}
             </div>
+
+            {/* 对比模式：差异清单 */}
+            {compareMode && (result as any).differences && (
+              <div className="bg-card rounded-2xl p-4 border border-amber-200 mb-4">
+                <p className="text-xl font-semibold text-foreground mb-3">📋 合同差异清单（{(result as any).differences.length} 处差异）</p>
+                {(result as any).differences.map((diff: any, i: number) => (
+                  <div key={i} className="mb-3 last:mb-0 p-3 bg-secondary rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xl font-medium text-foreground">{diff.field}</span>
+                      <span className={`text-base px-2 py-0.5 rounded-full ${diff.advantage === 'A更有利' ? 'bg-green-100 text-green-700' : diff.advantage === 'B更有利' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {diff.advantage}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div className="p-2 bg-white rounded-lg"><p className="text-base text-muted-foreground mb-1">合同A</p><p className="text-xl text-foreground">{diff.contract_a}</p></div>
+                      <div className="p-2 bg-white rounded-lg"><p className="text-base text-muted-foreground mb-1">合同B</p><p className="text-xl text-foreground">{diff.contract_b}</p></div>
+                    </div>
+                    <p className="text-xl text-muted-foreground leading-relaxed">{diff.analysis}</p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* 风险条款列表 */}
             {result.risks && result.risks.length > 0 ? (

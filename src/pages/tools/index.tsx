@@ -12,11 +12,15 @@ const toolGroups = [
     items: [
       { icon: 'i-mdi-stethoscope', title: '病假工资计算器', desc: '根据工资和病假天数计算应得工资', path: '/pages/calculator/index?type=sick' },
       { icon: 'i-mdi-home-alert-outline', title: '违约金计算器', desc: '租房提前退租违约金计算', path: '/pages/calculator/index?type=penalty' },
+      { icon: 'i-mdi-clock-outline', title: '加班工资计算器', desc: '平日/休息日/法定假日加班费', path: '/pages/calculator/index?type=overtime' },
+      { icon: 'i-mdi-cash-multiple', title: '离职补偿计算器', desc: 'N/N+1/2N 经济补偿金速算', path: '/pages/calculator/index?type=severance' },
+      { icon: 'i-mdi-account-cash-outline', title: '试用期工资计算器', desc: '试用期工资不得低于转正80%', path: '/pages/calculator/index?type=probation' },
     ],
   },
   {
-    title: '维权资源',
+    title: '法律资源',
     items: [
+      { icon: 'i-mdi-bookshelf', title: '法律知识库', desc: '浏览劳动法、租房、消费等法律法规原文', path: '/pages/knowledge/index' },
       { icon: 'i-mdi-map-marker-outline', title: '维权导航', desc: '全国劳动仲裁、消协、法援中心', path: '/pages/rights/index' },
       { icon: 'i-mdi-clipboard-check-outline', title: '证据采集向导', desc: '勾选已有证据，AI提示补充方向', path: '/pages/evidence/index' },
     ],

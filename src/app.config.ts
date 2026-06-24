@@ -16,6 +16,7 @@ const pages = [
   'pages/profile/index',
   'pages/profile/history',
   'pages/profile/saved',
+  'pages/knowledge/index',
 ]
 
 export default defineAppConfig({
