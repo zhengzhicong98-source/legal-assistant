@@ -1,5 +1,33 @@
 import { corsHeaders } from '../_shared/cors.ts'
 
+/** 高德 poi（location 为 "lng,lat" 字符串）归一化为前端约定的结构（location 为 {lat,lng}） */
+interface AmapPoi {
+  name?: string
+  address?: string
+  id?: string
+  pname?: string
+  cityname?: string
+  adname?: string
+  location?: string
+  distance?: string
+}
+function normalizePois(pois: AmapPoi[]): unknown[] {
+  if (!Array.isArray(pois)) return []
+  return pois.map((p) => {
+    const [lng, lat] = (p.location || '').split(',').map(Number)
+    return {
+      name: p.name || '',
+      address: typeof p.address === 'string' ? p.address : '',
+      uid: p.id || '',
+      province: p.pname,
+      city: p.cityname,
+      area: p.adname,
+      location: { lat: lat || 0, lng: lng || 0 },
+      detail_info: p.distance != null ? { distance: Number(p.distance) } : undefined,
+    }
+  })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -37,7 +65,10 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: '地图服务暂时不可用' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
       const data = await resp.json()
-      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(
+        JSON.stringify({ results: normalizePois(data.pois || []), status: data.status === '1' ? 0 : 1 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // ===== 周边检索 =====
@@ -69,7 +100,10 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: '地图服务暂时不可用' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
       const data = await resp.json()
-      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(
+        JSON.stringify({ results: normalizePois(data.pois || []), status: data.status === '1' ? 0 : 1 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // ===== 地点详情 =====

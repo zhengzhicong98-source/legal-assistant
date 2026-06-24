@@ -2,6 +2,13 @@
 .env
 .env.local
 .env.*.local
+.env.development
+.env.production
+.env.test
+.env.alpha
+.env.staging
+# 仅保留 .env.example 作为模板（用 ! 取消忽略）
+!.env.example
 
 # 依赖
 node_modules/
@@ -50,3 +57,12 @@ output/
 .sync
 history/*.json
 deploy_versions/
+
+# AI 辅助开发产生的临时/上下文文件，不入库
+nul
+historical_context.txt
+xiaohongshu_generator.md
+investigation_report.md
+investigation_summary.json
+# 嵌套副本目录（防止误提交同名子目录）
+/app-bar9rto6gwsh/

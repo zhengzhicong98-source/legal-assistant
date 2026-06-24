@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { callEdgeFunction } from '@/utils/callEdgeFunction'
-import { recordQuestion, saveConsultHistory, logAiCall, submitFeedback } from '@/db/api'
+import { recordQuestion, saveConsultHistory, logAiCall, submitFeedback, saveLaw } from '@/db/api'
 import { useAuth } from '@/contexts/AuthContext'
 import type { ChatMessage } from '@/db/types'
 
@@ -52,6 +52,22 @@ const DISCLAIMER = '本回复由AI生成，仅供参考，不构成正式法律�
 
 function MessageBubble({ msg, onSuggest, isLast, onFeedback, historyId }: { msg: ChatMessage; onSuggest?: (q: string) => void; isLast?: boolean; onFeedback?: (val: 1 | -1) => void; historyId?: string }) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
+  const { user } = useAuth()
+
+  const handleSaveLaw = async (knowledgeId: string) => {
+    if (!user) {
+      Taro.showModal({ title: '请先登录', content: '登录后才能收藏法条', confirmText: '去登录', success: (r) => { if (r.confirm) Taro.navigateTo({ url: '/pages/login/index' }) } })
+      return
+    }
+    const ok = await saveLaw(user.id, knowledgeId)
+    if (ok) {
+      setSavedIds(prev => new Set(prev).add(knowledgeId))
+      Taro.showToast({ title: '已收藏法条', icon: 'success', duration: 1500 })
+    } else {
+      Taro.showToast({ title: '收藏失败，请重试', icon: 'none' })
+    }
+  }
 
   if (msg.role === 'user') {
     return (
@@ -77,11 +93,37 @@ function MessageBubble({ msg, onSuggest, isLast, onFeedback, historyId }: { msg:
           <div className="i-mdi-scale-balance text-xl text-primary-foreground" />
         </div>
         <div className="flex flex-col gap-2">
-          {/* RAG 命中提示 */}
+          {/* RAG 命中提示 + 匹配法条收藏 */}
           {msg.ragUsed && (
-            <div className="flex items-center gap-1 px-3 py-1 bg-primary/10 rounded-full self-start">
-              <div className="i-mdi-database-check-outline text-xl text-primary" />
-              <span className="text-base text-primary font-medium">已参考知识库法条</span>
+            <div className="bg-primary/5 rounded-xl border border-primary/20 p-3">
+              <div className="flex items-center gap-1 mb-2">
+                <div className="i-mdi-database-check-outline text-xl text-primary" />
+                <span className="text-base text-primary font-medium">已参考知识库法条</span>
+              </div>
+              {(msg.legalRefs && msg.legalRefs.length > 0) ? (
+                <div className="flex flex-col gap-2">
+                  {msg.legalRefs.map((ref) => (
+                    <div key={ref.id} className="flex items-center gap-2 px-3 py-2 bg-card rounded-lg border border-border">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xl text-primary font-medium truncate">{ref.title}</p>
+                        <p className="text-base text-muted-foreground truncate">{ref.source}</p>
+                      </div>
+                      {savedIds.has(ref.id) ? (
+                        <span className="text-base text-muted-foreground flex items-center gap-1 flex-shrink-0">
+                          <div className="i-mdi-bookmark text-lg" />已收藏
+                        </span>
+                      ) : (
+                        <div className="text-xl text-primary px-2 py-1 active:scale-95 flex-shrink-0"
+                          onClick={() => handleSaveLaw(ref.id)}>
+                          <div className="i-mdi-bookmark-outline" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-base text-muted-foreground">知识库中未匹配到相关法条</p>
+              )}
             </div>
           )}
           {/* 主回答 */}
@@ -245,7 +287,7 @@ export default function Chat() {
             'Authorization': `Bearer ${anonKey}`,
             'apikey': anonKey || '',
           },
-          body: JSON.stringify({ messages: apiMessages, mode: 'chat' }),
+          body: JSON.stringify({ messages: apiMessages, mode: 'chat', stream: true }),
         })
 
         if (!response.ok || !response.body) {
@@ -258,6 +300,7 @@ export default function Chat() {
           content: '',
           timestamp: Date.now(),
           ragUsed: false,
+          legalRefs: [],
         }
         setMessages([...newMessages, assistantMsg])
         setLoading(false)
@@ -266,6 +309,7 @@ export default function Chat() {
         const decoder = new TextDecoder()
         let fullContent = ''
         let ragUsed = false
+        let legalRefs: { id: string; title: string; source: string }[] = []
 
         while (true) {
           const { done, value } = await reader.read()
@@ -281,9 +325,10 @@ export default function Chat() {
             if (jsonStr === '[DONE]') break
             try {
               const data = JSON.parse(jsonStr)
-              // 检查是否是末尾的 rag_used 元数据
+              // 检查是否是末尾的 rag_used 元数据（含 legal_refs）
               if ('rag_used' in data) {
                 ragUsed = data.rag_used
+                legalRefs = (data.legal_refs && Array.isArray(data.legal_refs)) ? data.legal_refs : []
                 continue
               }
               const delta = data?.choices?.[0]?.delta?.content || ''
@@ -297,7 +342,7 @@ export default function Chat() {
                     ...last,
                     content: fullContent,
                     ragUsed,
-                    // 保留已有的 historyId，不覆盖
+                    legalRefs,
                     historyId: last.historyId,
                   }
                   return updated
@@ -309,11 +354,10 @@ export default function Chat() {
 
         // 流结束后保存历史和日志
         const responseTimeMs = Date.now() - startTime
-        console.log('[debug] user:', user, 'fullContent length:', fullContent.length)
         if (user && fullContent) {
           try {
             const { id: historyId, error: saveError } = await saveConsultHistory(user.id, text.trim(), fullContent, ragUsed, responseTimeMs)
-            console.log('[debug] saveConsultHistory result:', historyId, saveError)
+            void saveError
             if (historyId) {
               setMessages(prev => {
                 const updated = [...prev]
@@ -349,7 +393,7 @@ export default function Chat() {
 
     // 小程序环境保持原有非流式逻辑
     const startTime = Date.now()
-    const { data, error } = await callEdgeFunction<{ content?: string; rag_used?: boolean }>('legal-chat', {
+    const { data, error } = await callEdgeFunction<{ content?: string; rag_used?: boolean; legal_refs?: { id: string; title: string; source: string }[] }>('legal-chat', {
       body: { messages: apiMessages, mode: 'chat' },
     })
 
@@ -360,12 +404,14 @@ export default function Chat() {
     } else {
       const aiContent = data?.content || '抱歉，未获取到回复，请重试。'
       const ragUsed = !!data?.rag_used
+      const legalRefs = (data?.legal_refs && Array.isArray(data.legal_refs)) ? data.legal_refs : []
       const responseTimeMs = Date.now() - startTime
       const assistantMsg: ChatMessage = {
         role: 'assistant',
         content: aiContent,
         timestamp: Date.now(),
         ragUsed,
+        legalRefs,
       }
       setMessages([...newMessages, assistantMsg])
       if (user) {

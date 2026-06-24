@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { getCasePostDetail, getUserCaseReactions, toggleLike, toggleSave } from '@/db/api'
 import { callEdgeFunction } from '@/utils/callEdgeFunction'
+import { useAuth } from '@/contexts/AuthContext'
 import type { CasePost } from '@/db/types'
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -28,16 +29,24 @@ function formatTime(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function getUserId(): string {
-  let uid = Taro.getStorageSync('userId')
-  if (!uid) {
-    uid = `anon_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    Taro.setStorageSync('userId', uid)
+/** 未登录时引导去登录，返回 false 表示中断操作 */
+function requireLogin(userId: string | undefined): userId is string {
+  if (!userId) {
+    Taro.showModal({
+      title: '请先登录',
+      content: '登录后才能点赞、收藏案例',
+      confirmText: '去登录',
+      success: (res) => {
+        if (res.confirm) Taro.navigateTo({ url: '/pages/login/index' })
+      },
+    })
+    return false
   }
-  return uid
+  return true
 }
 
 export default function PlazaDetail() {
+  const { user } = useAuth()
   const [post, setPost] = useState<CasePost | null>(null)
   const [liked, setLiked] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -59,14 +68,16 @@ export default function PlazaDetail() {
     setLoading(true)
     const data = await getCasePostDetail(postId)
     setPost(data)
-    if (data) {
-      const userId = getUserId()
-      const reactions = await getUserCaseReactions(postId, userId)
+    if (data && user) {
+      const reactions = await getUserCaseReactions(postId, user.id)
       setLiked(reactions.liked)
       setSaved(reactions.saved)
+    } else {
+      setLiked(false)
+      setSaved(false)
     }
     setLoading(false)
-  }, [postId])
+  }, [postId, user])
 
   useEffect(() => {
     loadData()
@@ -74,8 +85,8 @@ export default function PlazaDetail() {
 
   const handleLike = async () => {
     if (!post) return
-    const userId = getUserId()
-    const ok = await toggleLike(post.id, userId, liked)
+    if (!requireLogin(user?.id)) return
+    const ok = await toggleLike(post.id, user.id, liked)
     if (ok) {
       setLiked(!liked)
       setPost(prev => prev ? { ...prev, likes_count: prev.likes_count + (liked ? -1 : 1) } : prev)
@@ -84,8 +95,8 @@ export default function PlazaDetail() {
 
   const handleSave = async () => {
     if (!post) return
-    const userId = getUserId()
-    const ok = await toggleSave(post.id, userId, saved)
+    if (!requireLogin(user?.id)) return
+    const ok = await toggleSave(post.id, user.id, saved)
     if (ok) {
       setSaved(!saved)
       setPost(prev => prev ? { ...prev, saves_count: prev.saves_count + (saved ? -1 : 1) } : prev)

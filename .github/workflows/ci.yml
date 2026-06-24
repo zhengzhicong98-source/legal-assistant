@@ -1,17 +1,18 @@
 name: CI
 on: [push, pull_request]
 jobs:
-  typecheck:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 10.30.3
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
       - run: rm -f pnpm-workspace.yaml
-      - run: pnpm install
-      - run: pnpm tsc --noEmit --skipLibCheck --noUnusedLocals false --noUnusedParameters false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build:weapp

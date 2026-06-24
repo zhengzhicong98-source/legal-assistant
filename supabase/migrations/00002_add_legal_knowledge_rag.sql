@@ -118,4 +118,8 @@ INSERT INTO legal_knowledge (title, source, category, content) VALUES
 );
 
 -- 启用 Realtime（管理员上传后实时刷新列表）
-ALTER PUBLICATION supabase_realtime ADD TABLE legal_knowledge;
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE legal_knowledge;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

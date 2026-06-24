@@ -45,6 +45,7 @@ export interface ChatMessage {
   content: string
   timestamp: number
   ragUsed?: boolean
+  legalRefs?: { id: string; title: string; source: string }[]
   historyId?: string
   feedback?: 1 | -1 | null
 }

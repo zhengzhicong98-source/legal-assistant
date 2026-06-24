@@ -84,15 +84,25 @@ ALTER TABLE case_posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE case_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE case_saves ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS case_posts_select ON case_posts;
+DROP POLICY IF EXISTS case_posts_insert ON case_posts;
+DROP POLICY IF EXISTS case_posts_update ON case_posts;
+DROP POLICY IF EXISTS case_posts_delete ON case_posts;
 CREATE POLICY case_posts_select ON case_posts FOR SELECT USING (status = 'published');
 CREATE POLICY case_posts_insert ON case_posts FOR INSERT WITH CHECK (true);
 CREATE POLICY case_posts_update ON case_posts FOR UPDATE USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
 CREATE POLICY case_posts_delete ON case_posts FOR DELETE USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
 
+DROP POLICY IF EXISTS case_likes_select ON case_likes;
+DROP POLICY IF EXISTS case_likes_insert ON case_likes;
+DROP POLICY IF EXISTS case_likes_delete ON case_likes;
 CREATE POLICY case_likes_select ON case_likes FOR SELECT USING (true);
 CREATE POLICY case_likes_insert ON case_likes FOR INSERT WITH CHECK (true);
 CREATE POLICY case_likes_delete ON case_likes FOR DELETE USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
 
+DROP POLICY IF EXISTS case_saves_select ON case_saves;
+DROP POLICY IF EXISTS case_saves_insert ON case_saves;
+DROP POLICY IF EXISTS case_saves_delete ON case_saves;
 CREATE POLICY case_saves_select ON case_saves FOR SELECT USING (true);
 CREATE POLICY case_saves_insert ON case_saves FOR INSERT WITH CHECK (true);
 CREATE POLICY case_saves_delete ON case_saves FOR DELETE USING (user_id = current_setting('request.jwt.claims', true)::json->>'sub');
@@ -112,6 +122,9 @@ CREATE INDEX IF NOT EXISTS idx_question_stats_week ON question_stats(year DESC, 
 CREATE INDEX IF NOT EXISTS idx_question_stats_count ON question_stats(count DESC);
 
 ALTER TABLE question_stats ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS question_stats_select ON question_stats;
+DROP POLICY IF EXISTS question_stats_insert ON question_stats;
+DROP POLICY IF EXISTS question_stats_update ON question_stats;
 CREATE POLICY question_stats_select ON question_stats FOR SELECT USING (true);
 CREATE POLICY question_stats_insert ON question_stats FOR INSERT WITH CHECK (true);
 CREATE POLICY question_stats_update ON question_stats FOR UPDATE USING (true);

@@ -10,10 +10,11 @@
     "css": "sass"
   },
   "scripts": {
-    "dev": "echo This environment does not support running dev and build scripts. Do not attempt to run them. To validate code correctness, please run the lint script instead.",
-    "dev:h5": "echo This environment does not support running dev and build scripts. Do not attempt to run them. To validate code correctness, please run the lint script instead.",
+    "dev": "echo '[error] dev requires a real Taro runtime. Use dev:weapp inside WeChat DevTools or dev:h5 for browser.' && exit 1",
+    "dev:h5": "taro build --type h5 --watch",
     "dev:weapp": "taro build --type weapp --watch",
-    "build": "echo This environment does not support running dev and build scripts. Do not attempt to run them. To validate code correctness, please run the lint script instead.",
+    "build": "echo '[error] build requires a real Taro runtime. Use build:weapp or build:h5.' && exit 1",
+    "test": "echo '[warn] No tests configured yet. Add vitest + react-testing-library tests.' && exit 0",
     "build:weapp": "taro build --type weapp",
     "build:h5": "taro build --type h5",
     "postinstall": "weapp-tw patch",

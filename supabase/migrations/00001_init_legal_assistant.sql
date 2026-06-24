@@ -1,6 +1,6 @@
 
 -- 维权机构表
-CREATE TABLE rights_centers (
+CREATE TABLE IF NOT EXISTS rights_centers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   province text NOT NULL,
   city text NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE rights_centers (
 );
 
 -- 合同审查记录表
-CREATE TABLE contract_reviews (
+CREATE TABLE IF NOT EXISTS contract_reviews (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   file_url text,
   file_name text,
@@ -33,6 +33,8 @@ VALUES ('contracts', 'contracts', true, 10485760, ARRAY['image/jpeg','image/png'
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage策略：允许所有人上传和读取
+DROP POLICY IF EXISTS "public_read_contracts" ON storage.objects;
+DROP POLICY IF EXISTS "public_upload_contracts" ON storage.objects;
 CREATE POLICY "public_read_contracts" ON storage.objects FOR SELECT USING (bucket_id = 'contracts');
 CREATE POLICY "public_upload_contracts" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'contracts');
 

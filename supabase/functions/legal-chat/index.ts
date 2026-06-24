@@ -33,12 +33,19 @@ async function getQueryEmbedding(text: string, apiKey: string): Promise<number[]
 }
 
 /** 从知识库检索与问题最相关的法律条文 */
+interface RagDoc {
+  id: string
+  title: string
+  source: string
+  content: string
+}
+
 async function searchLegalDocs(
   query: string,
   apiKey: string,
   supabaseUrl: string,
   serviceKey: string
-): Promise<{ title: string; source: string; content: string }[]> {
+): Promise<RagDoc[]> {
   const embedding = await getQueryEmbedding(query, apiKey)
   if (!embedding) return []
 
@@ -50,7 +57,7 @@ async function searchLegalDocs(
       min_similarity: 0.5,
     })
     if (error || !data) return []
-    return (data as { title: string; source: string; content: string }[])
+    return (data as RagDoc[])
   } catch {
     return []
   }
@@ -134,7 +141,9 @@ Deno.serve(async (req) => {
       )
     }
 
-    const { messages, mode } = await req.json()
+    const { messages, mode, stream: streamReq } = await req.json()
+    // stream 默认 false：小程序端按 JSON 读取 content；H5 端显式传 stream:true 走 SSE 流
+    const useStream = streamReq === true
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -145,6 +154,7 @@ Deno.serve(async (req) => {
 
     // 仅在法律咨询模式下执行 RAG 检索
     let ragContext = ''
+    let legalRefs: { id: string; title: string; source: string }[] = []
     if (mode !== 'document' && mode !== 'dispute') {
       const userQuery = messages[messages.length - 1]?.content ?? ''
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -155,6 +165,7 @@ Deno.serve(async (req) => {
           ragDocs.map((d, i) =>
             `${i + 1}. ${d.source || d.title}\n${d.content}`
           ).join('\n\n')
+        legalRefs = ragDocs.map(d => ({ id: d.id, title: d.title, source: d.source }))
       }
     }
 
@@ -187,7 +198,7 @@ Deno.serve(async (req) => {
           model: modelName,
           messages: apiMessages,
           system: systemPrompt,
-          stream: true,
+          stream: useStream,
         }),
         signal: chatController.signal,
       })
@@ -228,9 +239,20 @@ Deno.serve(async (req) => {
       )
     }
 
+    const ragUsed = ragContext.length > 0
+
+    // 非流式模式（小程序端）：聚合智谱返回为完整 JSON，前端按 data.content 读取
+    if (!useStream) {
+      const result = await response.json()
+      const content = result?.choices?.[0]?.message?.content ?? ''
+      return new Response(
+        JSON.stringify({ content, rag_used: ragUsed, legal_refs: legalRefs }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // 流式透传：直接将智谱 AI 的 SSE 流返回给前端
     // 同时在流结束后注入 rag_used 信息
-    const ragUsed = ragContext.length > 0
 
     // 将原始流转换，在末尾追加 rag_used 信息
     const { readable, writable } = new TransformStream()
@@ -245,8 +267,8 @@ Deno.serve(async (req) => {
           if (done) break
           await writer.write(value)
         }
-        // 流结束后追加 rag_used 元数据
-        await writer.write(encoder.encode(`data: {"rag_used":${ragUsed}}\n\n`))
+        // 流结束后追加 rag_used 元数据和匹配法条引用
+        await writer.write(encoder.encode(`data: ${JSON.stringify({rag_used: ragUsed, legal_refs: legalRefs})}\n\n`))
         await writer.write(encoder.encode('data: [DONE]\n\n'))
       } catch (e) {
         console.error('流式传输错误:', e)

@@ -6,7 +6,6 @@ import type { RightsCenter, ContractReview, LegalKnowledge, CasePost, CaseCatego
 /** 获取所有省份列表 */
 export async function getProvinces(): Promise<string[]> {
   const { data, error } = await supabase.rpc('get_provinces')
-  console.log('getProvinces result:', JSON.stringify({ data, error }))  // 加这行
   if (error || !data) return []
   return data.map((d: { province: string }) => d.province)
 }

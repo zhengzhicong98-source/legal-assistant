@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS ai_call_logs (
 
 -- 3. RLS：仅允许用户查看自己的日志，管理员可查全部
 ALTER TABLE ai_call_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users can insert own logs" ON ai_call_logs;
+DROP POLICY IF EXISTS "users can view own logs" ON ai_call_logs;
 CREATE POLICY "users can insert own logs" ON ai_call_logs
   FOR INSERT WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 CREATE POLICY "users can view own logs" ON ai_call_logs

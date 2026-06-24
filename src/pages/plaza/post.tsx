@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Taro from '@tarojs/taro'
 import { createCasePost } from '@/db/api'
+import { useAuth } from '@/contexts/AuthContext'
 import type { CaseCategory, CasePost } from '@/db/types'
 
 const CATEGORIES: { key: CaseCategory; label: string; color: string }[] = [
@@ -16,17 +17,8 @@ const RESULTS: { key: CasePost['result']; label: string }[] = [
   { key: '待处理', label: '待处理' },
 ]
 
-/** 获取或生成 userId */
-function getUserId(): string {
-  let uid = Taro.getStorageSync('userId')
-  if (!uid) {
-    uid = `anon_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-    Taro.setStorageSync('userId', uid)
-  }
-  return uid
-}
-
 export default function PlazaPost() {
+  const { user, profile } = useAuth()
   const [category, setCategory] = useState<CaseCategory>('租房')
   const [title, setTitle] = useState('')
   const [question, setQuestion] = useState('')
@@ -40,6 +32,17 @@ export default function PlazaPost() {
 
   const handleSubmit = async () => {
     if (!canSubmit || submitting) return
+    if (!user) {
+      Taro.showModal({
+        title: '请先登录',
+        content: '发布案例需要登录后才能进行',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) Taro.navigateTo({ url: '/pages/login/index' })
+        },
+      })
+      return
+    }
     if (title.trim().length > 30) {
       Taro.showToast({ title: '标题最多30字', icon: 'none' })
       return
@@ -54,12 +57,11 @@ export default function PlazaPost() {
     }
 
     setSubmitting(true)
-    const userId = getUserId()
     const content = `问题：${question.trim()}\n解决方法：${solution.trim() || '暂无'}`
 
     const post = await createCasePost({
-      user_id: userId,
-      nickname: '匿名学长',
+      user_id: user.id,
+      nickname: isAnonymous ? '匿名学长' : (profile?.nickname || '法律学长'),
       category,
       title: title.trim(),
       content,
