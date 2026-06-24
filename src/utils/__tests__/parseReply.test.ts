@@ -64,8 +64,8 @@ describe('parseReply', () => {
     expect(result.suggestions).toEqual([])
   })
 
-  it('filters suggestions longer than 59 chars', () => {
-    const longReply = `[结论与分析]\nok\n\n---追问建议---\nvalid question?\n${'x'.repeat(60)}\nshort?`
+  it('filters suggestions longer than 79 chars', () => {
+    const longReply = `[结论与分析]\nok\n\n---追问建议---\nvalid question?\n${'x'.repeat(80)}\nshort?`
     const result = parseReply(longReply)
     expect(result.suggestions).toEqual(['valid question?', 'short?'])
   })

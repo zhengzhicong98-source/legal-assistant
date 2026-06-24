@@ -32,11 +32,14 @@ EXIT_CODES+=($?)
 ./scripts/checkAuthProvider.sh
 EXIT_CODES+=($?)
 
+./scripts/runCustomRules.sh
+EXIT_CODES+=($?)
+
 npx oxlint -c .oxlintrc.json
 EXIT_CODES+=($?)
 
 ALL_PASSED=true
-CHECKS=("scss" "biome" "tsgo" "navigation" "iconpath" "authprovider" "oxlint")
+CHECKS=("scss" "biome" "tsgo" "navigation" "iconpath" "authprovider" "customrules" "oxlint")
 FAILED_CHECKS=()
 for i in "${!EXIT_CODES[@]}"; do
     if [ ${EXIT_CODES[$i]} -ne 0 ]; then
