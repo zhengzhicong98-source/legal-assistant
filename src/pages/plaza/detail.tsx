@@ -90,6 +90,12 @@ export default function PlazaDetail() {
     if (ok) {
       setLiked(!liked)
       setPost(prev => prev ? { ...prev, likes_count: prev.likes_count + (liked ? -1 : 1) } : prev)
+      // 通知帖主（仅点赞时，取消点赞不发；不通知自己）
+      if (!liked && post.user_id !== user.id) {
+        callEdgeFunction('notify', {
+          body: { to_user_id: post.user_id, type: 'like', title: '有人点赞了你的案例', body: `案例「${post.title}」获得了一个赞`, related_id: post.id }
+        }).catch(() => {})
+      }
     }
   }
 
@@ -100,6 +106,12 @@ export default function PlazaDetail() {
     if (ok) {
       setSaved(!saved)
       setPost(prev => prev ? { ...prev, saves_count: prev.saves_count + (saved ? -1 : 1) } : prev)
+      // 通知帖主（仅收藏时，不通知自己）
+      if (!saved && post.user_id !== user.id) {
+        callEdgeFunction('notify', {
+          body: { to_user_id: post.user_id, type: 'save', title: '有人收藏了你的案例', body: `案例「${post.title}」被收藏了`, related_id: post.id }
+        }).catch(() => {})
+      }
     }
   }
 
