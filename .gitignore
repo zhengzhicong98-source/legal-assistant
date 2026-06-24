@@ -66,3 +66,8 @@ investigation_report.md
 investigation_summary.json
 # 嵌套副本目录（防止误提交同名子目录）
 /app-bar9rto6gwsh/
+# E2E test artifacts
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/.rules/dist/

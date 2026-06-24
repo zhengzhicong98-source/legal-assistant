@@ -3,6 +3,14 @@
   "categories": {
     "correctness": "off"
   },
-  "jsPlugins": [],
-  "rules": {}
+  "jsPlugins": [
+    "./.rules/dist/taro-app-config-validator.mjs",
+    "./.rules/dist/check-image-import-plugin.mjs",
+    "./.rules/dist/check-video-style-plugin.mjs"
+  ],
+  "rules": {
+    "taro-app-config-validator/taro-app-config-validator": "error",
+    "check-image-exists/no-missing-image": "error",
+    "check-video-style/no-video-inline-style": "error"
+  }
 }
