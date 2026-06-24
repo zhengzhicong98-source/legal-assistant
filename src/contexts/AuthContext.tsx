@@ -176,8 +176,11 @@ export function AuthProvider({children}: {children: ReactNode}) {
       }
 
       // Verify OTP token
+      if (!data?.token) {
+        throw new Error('微信登录失败：未获取到有效token，请重试')
+      }
       const {error: verifyError} = await supabase.auth.verifyOtp({
-        token_hash: data!.token,
+        token_hash: data.token,
         type: 'magiclink'
       })
 

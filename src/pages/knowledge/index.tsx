@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import Taro from '@tarojs/taro'
-import { getLegalKnowledgeDocs } from '@/db/api'
-import { saveLaw } from '@/db/api'
+import { getLegalKnowledgeDocs, saveLaw } from '@/db/api'
 import { useAuth } from '@/contexts/AuthContext'
 import type { LegalKnowledge } from '@/db/types'
 
@@ -34,6 +33,7 @@ export default function KnowledgePage() {
   useEffect(() => {
     getLegalKnowledgeDocs()
       .then(setDocs)
+      .catch(() => { setDocs([]); Taro.showToast({ title: '加载知识库失败', icon: 'none' }) })
       .finally(() => setLoading(false))
   }, [])
 

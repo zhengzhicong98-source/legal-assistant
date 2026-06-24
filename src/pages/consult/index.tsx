@@ -216,6 +216,10 @@ export default function Chat() {
   const [loading, setLoading] = useState(false)
   /** 搜索模式：普通咨询 | 联网搜索 */
   const [searchMode, setSearchMode] = useState<'chat' | 'search'>('chat')
+  const voiceRecognitionRef = useRef<any>(null)
+
+  // 清理：组件卸载时停止语音识别
+  useEffect(() => () => { voiceRecognitionRef.current?.abort() }, [])
 
   // 检查首页跳转过来的预填问题
   useEffect(() => {
@@ -600,7 +604,10 @@ export default function Chat() {
                 // H5: 尝试使用 Web Speech API
                 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
                 if (SpeechRecognition) {
+                  // 停止正在进行的识别
+                  if (voiceRecognitionRef.current) { voiceRecognitionRef.current.abort() }
                   const recognition = new SpeechRecognition()
+                  voiceRecognitionRef.current = recognition
                   recognition.lang = 'zh-CN'
                   recognition.interimResults = false
                   recognition.onresult = (event: any) => {
@@ -608,6 +615,7 @@ export default function Chat() {
                     setInput(prev => prev + transcript)
                   }
                   recognition.onerror = () => Taro.showToast({ title: '语音识别失败，请手动输入', icon: 'none' })
+                  recognition.onend = () => { voiceRecognitionRef.current = null }
                   recognition.start()
                   Taro.showToast({ title: '正在聆听…', icon: 'none', duration: 3000 })
                 } else {

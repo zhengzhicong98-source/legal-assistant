@@ -114,14 +114,22 @@ Deno.serve(async (req) => {
       }
     ]
 
-    const response = await fetch(MULTIMODAL_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ messages }),
-    })
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 60000)
+    let response: Response
+    try {
+      response = await fetch(MULTIMODAL_API, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ messages }),
+      })
+    } finally {
+      clearTimeout(timer)
+    }
 
     if (!response.ok) {
       const errText = await response.text()

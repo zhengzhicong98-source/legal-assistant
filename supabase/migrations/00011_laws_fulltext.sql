@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS laws_fulltext (
   effective_at date,
   created_at timestamptz DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_laws_fulltext_search ON laws_fulltext USING gin(to_tsvector('simple', title || ' ' || coalesce(content, '')));
+-- 使用 pg_trgm 三元组索引支持 ilike 模糊搜索（需先启用 pg_trgm 扩展）
+-- CREATE INDEX IF NOT EXISTS idx_laws_fulltext_trgm ON laws_fulltext USING gin(title gin_trgm_ops);
+
 
 ALTER TABLE laws_fulltext ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS laws_select ON laws_fulltext;

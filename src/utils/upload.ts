@@ -210,16 +210,19 @@ export async function selectMessageFile(
     if (Taro.getEnv() === Taro.ENV_TYPE.WEB) {
       return new Promise<File | null>((resolve) => {
         const input = document.createElement('input')
+        const fallbackTimer = setTimeout(() => { input.remove(); resolve(null) }, 120000)
         input.type = 'file'
         input.accept = extension.map(ext => `.${ext}`).join(',')
         input.onchange = (e: Event) => {
+          clearTimeout(fallbackTimer)
           const target = e.target as HTMLInputElement
           const selectedFile = target.files?.[0]
           input.remove()
           resolve(selectedFile || null)
         }
-        // Handle user cancellation
+        // Handle user cancellation (some browsers)
         input.oncancel = () => {
+          clearTimeout(fallbackTimer)
           input.remove()
           resolve(null)
         }

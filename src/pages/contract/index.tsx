@@ -168,7 +168,8 @@ export default function Contract() {
         Taro.showToast({ title: '审查失败，请稍后重试', icon: 'none' })
         return
       }
-      const reviewResult: ContractReviewResult = data!.result
+      if (!data?.result) throw new Error('审查结果为空')
+      const reviewResult: ContractReviewResult = data.result
       setResult(reviewResult)
 
       // 图片清晰度检测：如果summary包含模糊关键词，提示重拍
