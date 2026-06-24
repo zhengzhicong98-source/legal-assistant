@@ -36,9 +36,27 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get('INTEGRATIONS_API_KEY')
+    // JWT 认证校验：防止未登录用户操作知识库
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: '请先登录', code: 'UNAUTHORIZED' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    const token = authHeader.replace('Bearer ', '')
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!)
+    const { data: { user }, error: authError } = await userClient.auth.getUser(token)
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: '认证失败，请重新登录', code: 'AUTH_FAILED' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const apiKey = Deno.env.get('INTEGRATIONS_API_KEY')
 
     if (!apiKey) {
       return new Response(

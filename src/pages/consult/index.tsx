@@ -206,7 +206,7 @@ function MessageBubble({ msg, onSuggest, isLast, onFeedback, historyId }: { msg:
 export default function Chat() {
   useShareAppMessage(() => ({
     title: '法律咨询 - 法律助手',
-    path: '/pages/chat/index',
+    path: '/pages/consult/index',
   }))
   useShareTimeline(() => ({ title: '法律咨询 - 法律助手' }))
 

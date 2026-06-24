@@ -7,6 +7,15 @@ Deno.serve(async (req) => {
 
   try {
     logRequest(req, 'notify')
+
+    // JWT 认证校验
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return err('请先登录', 401)
+    const token = authHeader.replace('Bearer ', '')
+    const anonClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!)
+    const { data: { user }, error: authError } = await anonClient.auth.getUser(token)
+    if (authError || !user) return err('认证失败，请重新登录', 401)
+
     const body = await req.json()
     const { to_user_id, type, title, body: notifyBody, related_id } = body
 

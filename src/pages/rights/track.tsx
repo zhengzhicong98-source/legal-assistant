@@ -58,12 +58,6 @@ function TrackPage() {
     if (ok) { setNewNode(''); const data = await getRightsTimeline(caseId); setTimelines(prev => ({ ...prev, [caseId]: data })) }
   }
 
-  const handleToggleNode = async (caseId: string, nodeId: string, completed: boolean) => {
-    // 简单切换：更新节点完成状态
-    const ok = await addTimelineNode({ case_id: caseId, title: '', content: '', is_completed: !completed })
-    if (ok) { const data = await getRightsTimeline(caseId); setTimelines(prev => ({ ...prev, [caseId]: data })) }
-  }
-
   return (
     <div className="min-h-screen bg-background pb-8">
       <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border">

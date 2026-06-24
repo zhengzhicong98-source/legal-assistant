@@ -7,6 +7,12 @@ import type { LegalKnowledge } from '@/db/types'
 
 const CATEGORIES = ['通用', '劳动法', '租房', '消费者权益', '合同法', '其他']
 
+/** 获取用户 JWT token 用于 Edge Function 认证 */
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}
+}
+
 // 从一行文本中解析标题、来源和内容
 function parseLine(line: string): { title: string; source: string; content: string } | null {
   const trimmed = line.trim()
@@ -116,8 +122,10 @@ export default function Admin() {
       }
 
       // 直接使用 callEdgeFunction，绕过 supabase.functions.invoke 的 body 序列化兼容问题
+      const authHeaders = await getAuthHeaders()
       const result = await callEdgeFunction('embed-document', {
         body: { vectorize_only: true, id: doc.id, title: doc.title, content: doc.content },
+        headers: authHeaders,
       })
       if (result.error) {
         console.error('向量化失败:', result.error.message)
@@ -174,8 +182,10 @@ export default function Admin() {
     }
     setUploading(true)
     try {
+      const authHeaders = await getAuthHeaders()
       const { data, error } = await callEdgeFunction<{ inserted_count?: number }>('embed-document', {
         body: { title: title.trim(), source: source.trim(), category, content: content.trim() },
+        headers: authHeaders,
       })
       if (error) throw new Error(error.message)
       Taro.showToast({ title: `已添加 ${data?.inserted_count ?? 1} 条记录`, icon: 'success' })
@@ -218,8 +228,10 @@ export default function Admin() {
       const item = parsed[i]
       setBatchProgress({ current: i + 1, total: parsed.length, label: '导入' })
       try {
+        const authHeaders = await getAuthHeaders()
         const { error } = await callEdgeFunction('embed-document', {
           body: { title: item.title, source: item.source, category: batchCategory, content: item.content },
+          headers: authHeaders,
         })
         if (error) { fail++ } else { success++ }
       } catch { fail++ }

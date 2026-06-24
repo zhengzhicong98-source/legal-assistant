@@ -132,7 +132,7 @@ export default function PlazaPost() {
             className="w-full px-4 py-3 bg-card border border-border rounded-xl text-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
             placeholder="简短概括你的经历"
             value={title}
-            onInput={e => setTitle((e.target as HTMLInputElement).value)}
+            onInput={e => setTitle((e as any).detail?.value ?? (e as any).target?.value ?? '')}
             maxLength={30}
           />
         </div>
@@ -147,7 +147,7 @@ export default function PlazaPost() {
             className="w-full px-4 py-3 bg-card border border-border rounded-xl text-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none"
             placeholder="描述你遇到的法律问题..."
             value={question}
-            onInput={e => setQuestion((e.target as HTMLTextAreaElement).value)}
+            onInput={e => setQuestion((e as any).detail?.value ?? (e as any).target?.value ?? '')}
             maxLength={200}
             rows={4}
           />
@@ -163,7 +163,7 @@ export default function PlazaPost() {
             className="w-full px-4 py-3 bg-card border border-border rounded-xl text-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none"
             placeholder="你采取了哪些措施？结果如何？"
             value={solution}
-            onInput={e => setSolution((e.target as HTMLTextAreaElement).value)}
+            onInput={e => setSolution((e as any).detail?.value ?? (e as any).target?.value ?? '')}
             maxLength={200}
             rows={4}
           />
