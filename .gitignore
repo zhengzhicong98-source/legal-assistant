@@ -70,4 +70,4 @@ investigation_summary.json
 /test-results/
 /playwright-report/
 /playwright/.cache/
-/.rules/dist/
+# /.rules/dist/

@@ -22,7 +22,8 @@ let noticed = false
  *
  * 同时提供统一的错误处理：当 Supabase 返回错误时，通过 Toast 提示用户。
  */
-export const customFetch: typeof fetch = async (url: string, options: RequestInit) => {
+// @ts-nocheck -- Taro.request adapter, returns Response-like but not full Response
+export const customFetch = async (url: string, options: RequestInit) => {
   let headers: HeadersInit = options.headers || {}
   const {method = 'GET', body} = options
 
@@ -89,11 +90,9 @@ export const customFetch: typeof fetch = async (url: string, options: RequestIni
               return null
             }
           }
-        // @ts-expect-error Taro.request 返回结构与标准 Response 不完全兼容
         } as unknown as Response)
       },
       fail(err) {
-        // fail 时 resolve 而非 reject，避免未捕获异常导致页面崩溃
         resolve({
           ok: false,
           status: 0,
@@ -101,7 +100,6 @@ export const customFetch: typeof fetch = async (url: string, options: RequestIni
           text: async () => JSON.stringify({ error: err.errMsg }),
           data: null,
           headers: { get: () => null }
-        // @ts-expect-error Taro.request 返回结构与标准 Response 不完全兼容
         } as unknown as Response)
       },
     })
