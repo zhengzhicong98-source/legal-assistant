@@ -13,9 +13,5 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
-    coverage: {
-      provider: 'v8',
-      include: ['src/utils/**', 'src/db/**'],
-    },
   },
 })
