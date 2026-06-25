@@ -55,6 +55,12 @@ export default defineAppConfig({
         iconPath: './assets/icons/plaza_unselected.png',
         selectedIconPath: './assets/icons/plaza_selected.png',
       },
+      {
+        pagePath: 'pages/tools/index',
+        text: '工具箱',
+        iconPath: './assets/icons/tools_unselected.png',
+        selectedIconPath: './assets/icons/tools_selected.png',
+      },
     ]
   },
   window: {
