@@ -108,7 +108,7 @@ export const customFetch = async (url: string, options: RequestInit) => {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
-    fetch: customFetch
+    fetch: customFetch as any // Taro adapter, compatible with typeof fetch
   },
   auth: {
     storageKey: `${appId}-auth-token`

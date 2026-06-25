@@ -15,6 +15,7 @@ jobs:
       - run: rm -f pnpm-workspace.yaml
       - run: pnpm install --frozen-lockfile
       - run: npm install -g @ast-grep/cli
+      - run: chmod +x scripts/*.sh
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm build:weapp
