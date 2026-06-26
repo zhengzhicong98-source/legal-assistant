@@ -532,6 +532,60 @@ export async function addTimelineNode(params: { case_id: string; title: string; 
   return !error
 }
 
+// ==================== 热门避雷指南 ====================
+
+export interface Warning {
+  id: string
+  content: string
+  is_active: boolean
+  sort_order: number
+  created_at: string
+}
+
+/** 获取启用的避雷指南列表 */
+export async function getWarnings(): Promise<Warning[]> {
+  const { data, error } = await supabase
+    .from('warnings')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order')
+  if (error || !data) return []
+  return data as Warning[]
+}
+
+/** 管理员获取全部避雷指南（含禁用的） */
+export async function getAllWarnings(): Promise<Warning[]> {
+  const { data, error } = await supabase
+    .from('warnings')
+    .select('*')
+    .order('sort_order')
+  if (error || !data) return []
+  return data as Warning[]
+}
+
+/** 创建新的避雷指南条目 */
+export async function createWarning(content: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('warnings')
+    .insert({ content })
+  return !error
+}
+
+/** 更新避雷指南 */
+export async function updateWarning(id: string, updates: { content?: string; is_active?: boolean; sort_order?: number }): Promise<boolean> {
+  const { error } = await supabase
+    .from('warnings')
+    .update(updates)
+    .eq('id', id)
+  return !error
+}
+
+/** 删除避雷指南 */
+export async function deleteWarning(id: string): Promise<boolean> {
+  const { error } = await supabase.from('warnings').delete().eq('id', id)
+  return !error
+}
+
 // ==================== RAG 评估 ====================
 
 /** 保存 RAG 评估记录 */
