@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { Swiper, SwiperItem } from '@tarojs/components'
 import { callEdgeFunction } from '@/utils/callEdgeFunction'
-import { getWeeklyHotQuestions, getConsultHistory, getUnreadCount } from '@/db/api'
+import { getWeeklyHotQuestions, getConsultHistory, getUnreadCount, getWarnings, type Warning } from '@/db/api'
 import { useAuth } from '@/contexts/AuthContext'
 import type { QuestionStat } from '@/db/types'
 
@@ -94,6 +94,7 @@ export default function Home() {
   /** 精确到区级的位置文字，如"海淀区"；成功后展示「城市·区」组合 */
   const [currentDistrict, setCurrentDistrict] = useState('')
   const [hotQuestions, setHotQuestions] = useState<QuestionStat[]>([])
+  const [warnings, setWarnings] = useState<Warning[]>([])
   const [recommended, setRecommended] = useState<string[]>([])
   const [unread, setUnread] = useState(0)
 
@@ -138,6 +139,11 @@ export default function Home() {
   // 3. 加载本周热点问题
   useEffect(() => {
     getWeeklyHotQuestions().then(data => setHotQuestions(data)).catch(() => {})
+  }, [])
+
+  // 3b. 从后端加载避雷指南
+  useEffect(() => {
+    getWarnings().then(data => { if (data.length > 0) setWarnings(data) }).catch(() => {})
   }, [])
 
   // 4. 未读通知计数（每 30s 轮询）
@@ -237,7 +243,7 @@ export default function Home() {
             style={{ height: '48px' }}
             circular
           >
-            {WARNINGS.map((w, i) => (
+            {(warnings.length > 0 ? warnings.map(w => w.content) : WARNINGS).map((w, i) => (
               <SwiperItem key={i}>
                 <div className="flex items-center px-4 h-full">
                   <p className="text-xl text-amber-800 leading-snug line-clamp-1">{w}</p>
