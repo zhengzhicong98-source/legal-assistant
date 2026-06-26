@@ -292,6 +292,15 @@ export default function Admin() {
 
   return (
     <RoleGuard requiredRole="admin">
+    {/* 数据看板入口 */}
+    <div
+      className="flex items-center gap-2 px-4 py-3 bg-card rounded-xl border border-border mb-4"
+      onClick={() => Taro.navigateTo({ url: '/pages/admin/stats' })}
+    >
+      <div className="i-mdi-chart-bar text-xl text-primary" />
+      <span className="text-xl text-foreground flex-1">数据看板</span>
+      <div className="i-mdi-chevron-right text-xl text-muted-foreground" />
+    </div>
     <div className="min-h-screen bg-background">
       {/* 头部 */}
       <div className="bg-gradient-primary px-6 py-8">
