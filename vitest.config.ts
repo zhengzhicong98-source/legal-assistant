@@ -8,8 +8,9 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'node',
+    environment: 'happy-dom',
     globals: true,
+    include: ['src/__tests__/**/*.test.ts'],
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
   },
 })

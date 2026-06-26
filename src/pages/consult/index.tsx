@@ -4,6 +4,7 @@ import { callEdgeFunction } from '@/utils/callEdgeFunction'
 import { recordQuestion, saveConsultHistory, logAiCall, submitFeedback, saveLaw } from '@/db/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { parseReply } from '@/utils/parseReply'
+import { checkFrontendInput } from '@/utils/contentFilter'
 import type { ChatMessage } from '@/db/types'
 
 const QUICK_QUESTIONS = [
@@ -11,21 +12,6 @@ const QUICK_QUESTIONS = [
   '试用期被解雇有赔偿吗？',
   '租房合同提前解除怎么处理？',
   '公司不签劳动合同违法吗？',
-]
-
-// 前端输入预检黑名单（简化版，与后端保持一致）
-const FRONTEND_BLACKLIST = [
-  '杀人', '自杀', '自残', '砍人', '捅人', '毒杀', '谋杀',
-  '色情', '卖淫', '嫖娼', '淫秽', '裸照', '偷拍', '强奸', '性侵',
-  '约炮', '援交', '裸聊', '包养', '性交易',
-  '诈骗', '骗术', '骗钱', '骗保', '伪造证件', '假证', '套现', '洗钱',
-  '贩毒', '吸毒', '制毒', '毒品', '冰毒', '海洛因',
-  '黑客', '入侵', '盗刷', '盗号',
-  '赌博', '开设赌场', '赌球', '网络赌博',
-  '抢劫', '盗窃', '偷东西', '偷车',
-  '纵火', '投毒', '绑架', '勒索', '走私', '非法持枪',
-  '校园贷', '裸条', '套路贷', '代考', '代写论文', '论文代写',
-  '刷单诈骗', '高薪兼职诈骗',
 ]
 
 const DISCLAIMER = '本回复由AI生成，仅供参考，不构成正式法律建议。若情况紧急请咨询专业律师。'
@@ -506,17 +492,10 @@ export default function Chat() {
     const trimmed = text.trim()
     if (!trimmed) return
 
-    // 前端输入预检：长度限制
-    if (trimmed.length > 500) {
-      Taro.showToast({ title: '问题过长，请控制在500字以内', icon: 'none' })
-      return
-    }
-
-    // 前端输入预检：违禁词检测
-    const normalized = trimmed.toLowerCase()
-    const hit = FRONTEND_BLACKLIST.find((k) => normalized.includes(k))
-    if (hit) {
-      Taro.showToast({ title: '您的问题包含不当内容，请重新描述', icon: 'none' })
+    // 前端输入预检（长度 + 违禁词）
+    const check = checkFrontendInput(trimmed)
+    if (!check.ok) {
+      Taro.showToast({ title: check.reason, icon: 'none' })
       return
     }
 
