@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { Swiper, SwiperItem } from '@tarojs/components'
 import { callEdgeFunction } from '@/utils/callEdgeFunction'
@@ -97,6 +97,7 @@ export default function Home() {
   const [warnings, setWarnings] = useState<Warning[]>([])
   const [recommended, setRecommended] = useState<string[]>([])
   const [unread, setUnread] = useState(0)
+  const swiperIdxRef = useRef(0)
 
   // 1. IP 定位（快速、无需授权）
   useEffect(() => {
@@ -242,18 +243,23 @@ export default function Home() {
             vertical
             style={{ height: '48px' }}
             circular
+            onChange={(e: any) => {
+              const idx = e?.detail?.current ?? 0
+              swiperIdxRef.current = idx
+            }}
+            onClick={() => {
+              const items = warnings.length > 0 ? warnings.map(w => w.content) : WARNINGS
+              const w = items[swiperIdxRef.current % items.length]
+              if (w) {
+                const point = w.replace(/^避雷\s*\|\s*/, '')
+                Taro.setStorageSync('consult_prefill', `${point}，请问相关法律依据是什么？`)
+                Taro.switchTab({ url: '/pages/consult/index' })
+              }
+            }}
           >
             {(warnings.length > 0 ? warnings.map(w => w.content) : WARNINGS).map((w, i) => (
               <SwiperItem key={i}>
-                <div
-                  className="flex items-center px-4 h-full active:opacity-70"
-                  onClick={() => {
-                    // 提取避雷要点作为咨询问题
-                    const point = w.replace(/^避雷\s*\|\s*/, '')
-                    Taro.setStorageSync('consult_prefill', `${point}，请问相关法律依据是什么？`)
-                    Taro.switchTab({ url: '/pages/consult/index' })
-                  }}
-                >
+                <div className="flex items-center px-4 h-full">
                   <p className="text-xl text-amber-800 leading-snug line-clamp-1">{w}</p>
                   <div className="i-mdi-arrow-right text-xl text-amber-400 flex-shrink-0 ml-1" />
                 </div>
