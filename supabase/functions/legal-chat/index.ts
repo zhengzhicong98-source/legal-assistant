@@ -1,6 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { ok, err, handleOptions, logRequest } from '../_shared/response.ts'
+import { checkInput, checkOutput } from '../_shared/content-filter.ts'
 
 async function sendAlert(
   supabaseUrl: string,
@@ -163,11 +164,40 @@ Deno.serve(async (req) => {
       return err('请提供对话消息', 400)
     }
 
+    const startTime = Date.now()
+    const userQuery = messages[messages.length - 1]?.content ?? ''
+
+    // ========== 输入内容安全过滤 ==========
+    const inputCheck = checkInput(userQuery)
+    if (inputCheck.blocked) {
+      // 记录拦截日志
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        const supabase = createClient(supabaseUrl, serviceKey)
+        await supabase.from('ai_call_logs').insert({
+          user_id: null,
+          function_name: 'legal-chat',
+          model: 'glm-4-flash',
+          prompt_length: userQuery.length,
+          response_length: 0,
+          token_estimate: Math.ceil(userQuery.length / 4),
+          response_time_ms: Date.now() - startTime,
+          rag_used: false,
+          rag_hit_count: 0,
+          success: false,
+          error_message: `输入拦截：${inputCheck.reason}`,
+        })
+      } catch {
+        // 日志写入失败不影响拦截
+      }
+      return err('您的问题包含不当内容，请重新描述', 400)
+    }
+
     // 仅在法律咨询模式下执行 RAG 检索
     let ragContext = ''
     let legalRefs: { id: string; title: string; source: string }[] = []
     if (mode !== 'document' && mode !== 'dispute') {
-      const userQuery = messages[messages.length - 1]?.content ?? ''
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
       const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       const ragDocs = await searchLegalDocs(userQuery, apiKey, supabaseUrl, serviceKey)
@@ -253,7 +283,36 @@ Deno.serve(async (req) => {
     // 非流式模式（小程序端）：聚合智谱返回为完整 JSON，前端按 data.content 读取
     if (!useStream) {
       const result = await response.json()
-      const content = result?.choices?.[0]?.message?.content ?? ''
+      const rawContent = result?.choices?.[0]?.message?.content ?? ''
+
+      // AI输出内容安全审核
+      const outputCheck = await checkOutput(rawContent, apiKey)
+      let content = rawContent
+      if (!outputCheck.safe) {
+        content = '抱歉，该回答包含不当内容，请换个方式提问'
+        // 记录拦截日志
+        try {
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+          const supabase = createClient(supabaseUrl, serviceKey)
+          await supabase.from('ai_call_logs').insert({
+            user_id: null,
+            function_name: 'legal-chat',
+            model: 'glm-4-flash',
+            prompt_length: userQuery.length,
+            response_length: rawContent.length,
+            token_estimate: Math.ceil((userQuery.length + rawContent.length) / 4),
+            response_time_ms: Date.now() - startTime,
+            rag_used: ragUsed,
+            rag_hit_count: ragUsed ? 1 : 0,
+            success: false,
+            error_message: `输出拦截：${outputCheck.reason || '内容不合规'}`,
+          })
+        } catch {
+          // 日志写入失败不影响主流程
+        }
+      }
+
       return ok({ content, rag_used: ragUsed, legal_refs: legalRefs })
     }
 
@@ -264,17 +323,65 @@ Deno.serve(async (req) => {
     const { readable, writable } = new TransformStream()
     const writer = writable.getWriter()
     const encoder = new TextEncoder()
+    const decoder = new TextDecoder()
 
     ;(async () => {
       try {
         const reader = response.body!.getReader()
+        let fullContent = ''
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
           await writer.write(value)
+
+          // 收集完整内容用于后续审核
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n')
+          for (const line of lines) {
+            const trimmed = line.trim()
+            if (!trimmed.startsWith('data:')) continue
+            const jsonStr = trimmed.slice(5).trim()
+            if (jsonStr === '[DONE]') continue
+            try {
+              const data = JSON.parse(jsonStr)
+              const delta = data?.choices?.[0]?.delta?.content || ''
+              if (delta) fullContent += delta
+            } catch { /* 跳过无效 chunk */ }
+          }
         }
         // 流结束后追加 rag_used 元数据和匹配法条引用
         await writer.write(encoder.encode(`data: ${JSON.stringify({rag_used: ragUsed, legal_refs: legalRefs})}\n\n`))
+
+        // 异步输出审核（流式）
+        if (fullContent) {
+          const outputCheck = await checkOutput(fullContent, apiKey)
+          if (!outputCheck.safe) {
+            // 追加内容拦截通知
+            await writer.write(encoder.encode(`data: ${JSON.stringify({content_blocked: true})}\n\n`))
+            // 记录拦截日志
+            try {
+              const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+              const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+              const supabase = createClient(supabaseUrl, serviceKey)
+              await supabase.from('ai_call_logs').insert({
+                user_id: null,
+                function_name: 'legal-chat',
+                model: 'glm-4-flash',
+                prompt_length: userQuery.length,
+                response_length: fullContent.length,
+                token_estimate: Math.ceil((userQuery.length + fullContent.length) / 4),
+                response_time_ms: Date.now() - startTime,
+                rag_used: ragUsed,
+                rag_hit_count: ragUsed ? 1 : 0,
+                success: false,
+                error_message: `输出拦截（流式）：${outputCheck.reason || '内容不合规'}`,
+              })
+            } catch {
+              // 日志写入失败不影响主流程
+            }
+          }
+        }
+
         await writer.write(encoder.encode('data: [DONE]\n\n'))
       } catch (e) {
         console.error('流式传输错误:', e)
