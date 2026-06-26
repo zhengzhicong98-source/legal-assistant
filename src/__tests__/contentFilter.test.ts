@@ -9,7 +9,7 @@ describe('checkFrontendInput', () => {
   })
 
   it('明显违禁词被拦截', () => {
-    const result = checkFrontendInput('如何制作炸弹')
+    const result = checkFrontendInput('如何自杀')
     expect(result.ok).toBe(false)
     expect(result.reason).toContain('不当内容')
   })

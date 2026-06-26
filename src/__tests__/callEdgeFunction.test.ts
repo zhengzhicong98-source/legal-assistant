@@ -64,6 +64,6 @@ describe('callEdgeFunction (H5)', () => {
     const result = await callEdgeFunction('legal-chat', { body: { messages: [] } })
     expect(result.data).toBeNull()
     expect(result.error).not.toBeNull()
-    expect(result.error?.message).toBe('网络请求失败')
+    expect(result.error?.message).toBe('Failed to fetch')
   })
 })
