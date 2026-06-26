@@ -43,11 +43,20 @@ async function getQueryEmbedding(text: string, apiKey: string): Promise<number[]
     } finally {
       clearTimeout(embedTimer)
     }
-    if (!response.ok) return null
+    if (!response.ok) {
+      console.error(`[legal-chat] Embedding API返回非200: status=${response.status}`)
+      return null
+    }
     const data = await response.json()
     const embedding = data?.data?.[0]?.embedding
-    return Array.isArray(embedding) ? embedding : null
-  } catch {
+    if (!Array.isArray(embedding)) {
+      console.error(`[legal-chat] Embedding 返回格式异常: keys=${Object.keys(data || {}).join(',')}`)
+      return null
+    }
+    console.log(`[legal-chat] Embedding 获取成功: dim=${embedding.length}, query_len=${text.length}`)
+    return embedding
+  } catch (e) {
+    console.error(`[legal-chat] Embedding 调用异常:`, e)
     return null
   }
 }
@@ -67,18 +76,32 @@ async function searchLegalDocs(
   serviceKey: string
 ): Promise<RagDoc[]> {
   const embedding = await getQueryEmbedding(query, apiKey)
-  if (!embedding) return []
+  if (!embedding) {
+    console.log('[legal-chat] RAG: Embedding 获取失败，跳过检索')
+    return []
+  }
 
   try {
     const supabase = createClient(supabaseUrl, serviceKey)
+    const queryVec = `[${embedding.join(',')}]`
+    console.log(`[legal-chat] RAG: 调用 match_legal_docs, dim=${embedding.length}, min_similarity=0.3`)
     const { data, error } = await supabase.rpc('match_legal_docs', {
-      query_embedding: `[${embedding.join(',')}]`,
+      query_embedding: queryVec,
       match_count: 3,
       min_similarity: 0.3,
     })
-    if (error || !data) return []
+    if (error) {
+      console.error(`[legal-chat] RAG: match_legal_docs RPC 错误: code=${error.code}, message=${error.message}, details=${error.details}`)
+      return []
+    }
+    if (!data || data.length === 0) {
+      console.log(`[legal-chat] RAG: match_legal_docs 返回 0 条结果 (阈值=0.3)`)
+      return []
+    }
+    console.log(`[legal-chat] RAG: 检索成功! 命中 ${data.length} 条文档: ${(data as RagDoc[]).map(d => `${d.title}(sim=${(d as any).similarity?.toFixed?.(3) ?? '?'})`).join(', ')}`)
     return (data as RagDoc[])
-  } catch {
+  } catch (e) {
+    console.error(`[legal-chat] RAG: match_legal_docs 异常:`, e)
     return []
   }
 }
