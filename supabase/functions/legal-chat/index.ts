@@ -74,7 +74,7 @@ async function searchLegalDocs(
     const { data, error } = await supabase.rpc('match_legal_docs', {
       query_embedding: `[${embedding.join(',')}]`,
       match_count: 3,
-      min_similarity: 0.5,
+      min_similarity: 0.3,
     })
     if (error || !data) return []
     return (data as RagDoc[])
