@@ -75,7 +75,7 @@ export default function Admin() {
 
   useEffect(() => { loadDocs() }, [loadDocs])
 
-  // 实时订阅知识库变更
+  // 实时订阅知识库变更（仅订阅一次，不依赖 loadDocs 避免循环重订阅）
   useEffect(() => {
     const channel = supabase
       .channel('admin-legal-knowledge')
@@ -84,7 +84,7 @@ export default function Admin() {
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [loadDocs])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 统计
   const totalCount = docs.length
