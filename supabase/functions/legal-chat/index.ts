@@ -2,6 +2,24 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 import { ok, err, handleOptions, logRequest } from '../_shared/response.ts'
 
+async function sendAlert(
+  supabaseUrl: string,
+  level: 'error' | 'warning' | 'info',
+  title: string,
+  message: string,
+  details?: Record<string, unknown>
+) {
+  try {
+    await fetch(`${supabaseUrl}/functions/v1/alert-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level, title, message, details }),
+    })
+  } catch {
+    console.error('[legal-chat] 告警发送失败')
+  }
+}
+
 const TEXT_API = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
 const EMBED_API = 'https://open.bigmodel.cn/api/paas/v4/embeddings'
 
@@ -181,31 +199,52 @@ Deno.serve(async (req) => {
 
     let response: Response
     try {
-      response = await fetch(TEXT_API, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: modelName,
-          messages: apiMessages,
-          system: systemPrompt,
-          stream: useStream,
-        }),
-        signal: chatController.signal,
-      })
-    } finally {
-      clearTimeout(chatTimer)
+      try {
+        response = await fetch(TEXT_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: apiMessages,
+            system: systemPrompt,
+            stream: useStream,
+          }),
+          signal: chatController.signal,
+        })
+      } finally {
+        clearTimeout(chatTimer)
+      }
+    } catch (fetchError) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        await sendAlert(supabaseUrl, 'error', 'AI调用超时', 'legal-chat 调用智谱AI超时（55s）', { mode })
+        return err('AI响应超时，请稍后重试', 504)
+      }
+      await sendAlert(supabaseUrl, 'error', 'AI调用网络错误', String(fetchError))
+      return err('网络错误，请稍后重试', 500)
     }
 
     if (!response.ok) {
       const errText = await response.text()
       console.error(`[legal-chat] 文本API错误 [${response.status}]:`, errText)
-      if (response.status === 429) return err('请求过于频繁，请稍后再试', 429)
-      if (response.status === 401 || response.status === 403) return err('API密钥无效，请联系管理员', 500)
-      if (response.status === 402) return err('API余额不足，请联系管理员', 402)
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      if (response.status === 429) {
+        await sendAlert(supabaseUrl, 'warning', 'AI限流', '智谱AI返回429，请求过于频繁')
+        return err('请求过于频繁，请稍后再试', 429)
+      }
+      if (response.status === 401 || response.status === 403) {
+        await sendAlert(supabaseUrl, 'error', 'AI密钥无效', `智谱AI返回${response.status}`)
+        return err('API密钥无效，请联系管理员', 500)
+      }
+      if (response.status === 402) {
+        await sendAlert(supabaseUrl, 'error', 'AI余额不足', '智谱AI返回402，余额不足')
+        return err('API余额不足，请联系管理员', 402)
+      }
       if (response.status === 400) return err('请求参数错误，请检查输入内容', 400)
+      await sendAlert(supabaseUrl, 'error', 'AI服务异常', `智谱AI返回${response.status}`, { errText: errText.slice(0, 200) })
       return err('AI服务暂时不可用，请稍后再试', 500)
     }
 
@@ -254,6 +293,10 @@ Deno.serve(async (req) => {
     })
   } catch (error) {
     console.error('[legal-chat] 错误:', error)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    if (supabaseUrl) {
+      await sendAlert(supabaseUrl, 'error', 'Edge Function崩溃', String(error))
+    }
     return err('服务异常，请稍后重试', 500)
   }
 })
