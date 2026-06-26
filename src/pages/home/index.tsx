@@ -245,8 +245,17 @@ export default function Home() {
           >
             {(warnings.length > 0 ? warnings.map(w => w.content) : WARNINGS).map((w, i) => (
               <SwiperItem key={i}>
-                <div className="flex items-center px-4 h-full">
+                <div
+                  className="flex items-center px-4 h-full active:opacity-70"
+                  onClick={() => {
+                    // 提取避雷要点作为咨询问题
+                    const point = w.replace(/^避雷\s*\|\s*/, '')
+                    Taro.setStorageSync('consult_prefill', `${point}，请问相关法律依据是什么？`)
+                    Taro.switchTab({ url: '/pages/consult/index' })
+                  }}
+                >
                   <p className="text-xl text-amber-800 leading-snug line-clamp-1">{w}</p>
+                  <div className="i-mdi-arrow-right text-xl text-amber-400 flex-shrink-0 ml-1" />
                 </div>
               </SwiperItem>
             ))}
