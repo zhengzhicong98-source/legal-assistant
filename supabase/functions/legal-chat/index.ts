@@ -24,41 +24,52 @@ async function sendAlert(
 const TEXT_API = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
 const EMBED_API = 'https://open.bigmodel.cn/api/paas/v4/embeddings'
 
-/** 调用 Embedding API 获取查询向量（失败时静默返回 null，不阻断正常对话） */
+/** 调用 Embedding API 获取查询向量（429限流自动重试1次，其他失败静默返回 null） */
 async function getQueryEmbedding(text: string, apiKey: string): Promise<number[] | null> {
-  try {
-    const embedController = new AbortController()
-    const embedTimer = setTimeout(() => embedController.abort(), 8000)
-    let response: Response
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      response = await fetch(EMBED_API, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({ model: 'embedding-3', input: text }),
-        signal: embedController.signal,
-      })
-    } finally {
-      clearTimeout(embedTimer)
-    }
-    if (!response.ok) {
-      console.error(`[legal-chat] Embedding API返回非200: status=${response.status}`)
+      const embedController = new AbortController()
+      const embedTimer = setTimeout(() => embedController.abort(), 8000)
+      let response: Response
+      try {
+        response = await fetch(EMBED_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ model: 'embedding-3', input: text }),
+          signal: embedController.signal,
+        })
+      } finally {
+        clearTimeout(embedTimer)
+      }
+
+      if (response.status === 429 && attempt === 0) {
+        console.warn('[legal-chat] Embedding API 限流，1秒后重试...')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        continue
+      }
+
+      if (!response.ok) {
+        console.error(`[legal-chat] Embedding API返回非200: status=${response.status}`)
+        return null
+      }
+
+      const data = await response.json()
+      const embedding = data?.data?.[0]?.embedding
+      if (!Array.isArray(embedding)) {
+        console.error(`[legal-chat] Embedding 返回格式异常: keys=${Object.keys(data || {}).join(',')}`)
+        return null
+      }
+      console.log(`[legal-chat] Embedding 获取成功: dim=${embedding.length}, query_len=${text.length}`)
+      return embedding
+    } catch (e) {
+      console.error(`[legal-chat] Embedding 调用异常:`, e)
       return null
     }
-    const data = await response.json()
-    const embedding = data?.data?.[0]?.embedding
-    if (!Array.isArray(embedding)) {
-      console.error(`[legal-chat] Embedding 返回格式异常: keys=${Object.keys(data || {}).join(',')}`)
-      return null
-    }
-    console.log(`[legal-chat] Embedding 获取成功: dim=${embedding.length}, query_len=${text.length}`)
-    return embedding
-  } catch (e) {
-    console.error(`[legal-chat] Embedding 调用异常:`, e)
-    return null
   }
+  return null
 }
 
 /** 从知识库检索与问题最相关的法律条文 */
