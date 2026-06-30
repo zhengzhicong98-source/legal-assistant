@@ -21,6 +21,9 @@ async function sendAlert(
   }
 }
 
+/** 内存缓存：同一进程内复用 Embedding 向量，避免重复调用 API */
+const embeddingCache = new Map<string, number[]>()
+
 const TEXT_API = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
 const EMBED_API = 'https://open.bigmodel.cn/api/paas/v4/embeddings'
 
@@ -46,8 +49,8 @@ async function getQueryEmbedding(text: string, apiKey: string): Promise<number[]
       }
 
       if (response.status === 429 && attempt === 0) {
-        console.warn('[legal-chat] Embedding API 限流，1秒后重试...')
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        console.warn('[legal-chat] Embedding API 限流，3秒后重试...')
+        await new Promise(resolve => setTimeout(resolve, 3000))
         continue
       }
 
@@ -86,10 +89,24 @@ async function searchLegalDocs(
   supabaseUrl: string,
   serviceKey: string
 ): Promise<RagDoc[]> {
-  const embedding = await getQueryEmbedding(query, apiKey)
+  // 先查内存缓存，避免同一问题重复调用 Embedding API
+  const cacheKey = query.slice(0, 50)
+  let cached = embeddingCache.get(cacheKey)
+  if (cached) {
+    console.log(`[legal-chat] RAG: 使用缓存 Embedding, dim=${cached.length}, cache_size=${embeddingCache.size}`)
+  }
+  const embedding = cached ?? await getQueryEmbedding(query, apiKey)
   if (!embedding) {
     console.log('[legal-chat] RAG: Embedding 获取失败，跳过检索')
     return []
+  }
+  // 存入缓存（仅当不是缓存命中时）
+  if (!cached) {
+    embeddingCache.set(cacheKey, embedding)
+    if (embeddingCache.size > 100) {
+      embeddingCache.clear()
+      console.log('[legal-chat] Embedding 缓存已满(>100)，已清空')
+    }
   }
 
   try {

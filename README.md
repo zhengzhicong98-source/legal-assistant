@@ -1,265 +1,336 @@
 # 法律助手小程序（LegalAssistant）
 
-面向大学生的法律咨询微信小程序，提供智能法律问答、合同审查、维权导航、案例广场等一站式法律服务。
+面向大学生的法律咨询微信小程序，提供智能法律问答、合同审查、维权导航、案例广场、避雷指南等一站式法律服务。
+
+> 当前版本聚焦三件事：**RAG 准确性**（向量检索 + 评估闭环）、**安全合规**（RLS + 内容安全过滤 + RBAC）、**可观测性**（全链路追踪 + 监控告警）。
 
 ## 核心功能
 
 | 功能 | 说明 |
 |------|------|
-| **AI 法律咨询** | 基于 RAG（检索增强生成）的法律问答，信源回溯、多轮上下文确认、防幻觉 |
-| **合同审查** | 上传合同图片，AI 识别霸王条款、评估风险等级、给出修改建议 |
-| **维权导航** | 查询全国各地维权机构（劳动仲裁委、消协、法援中心），支持附近搜索和一键导航 |
+| **AI 法律咨询** | 基于 RAG（检索增强生成）的法律问答，信源回溯、多轮上下文、AI 自评、防幻觉 |
+| **合同审查** | 上传合同图片/PDF，AI 识别霸王条款、评估风险等级、给出修改建议 |
+| **维权导航** | 查询全国维权机构（劳动仲裁委、消协、法援中心、律所），支持附近搜索和一键导航 |
 | **案例广场** | 用户分享维权案例，支持点赞、收藏、分类筛选 |
+| **避雷指南** | 热门避雷案例后台化运营，首页 Swiper 展示，点击跳转咨询 |
 | **法律工具** | 诉讼费计算器、证据清单生成等实用工具 |
+| **法条检索** | 全文检索法律条文（PostgreSQL 全文索引） |
+| **知识库管理** | RAG 知识库后台 + 数据看板 + RAG 评估面板 |
 
 ## 技术架构
 
 ```mermaid
 graph LR
-    subgraph 前端
-        A[Taro 4 + React + TypeScript]
-        B[TailwindCSS]
+    subgraph 前端[前端 - Taro 4]
+        A[React 18 + TypeScript 5]
+        B[TailwindCSS + Sass]
         C[Zustand 状态管理]
     end
 
-    subgraph 后端服务
-        D[Supabase Edge Functions]
+    subgraph 后端[Supabase]
+        D[Edge Functions / Deno]
         E[PostgreSQL + pgvector]
+        F[Realtime / Auth / Storage]
     end
 
-    subgraph 第三方API
-        F[智谱 AI / glm-4-flash]
-        G[高德地图 API]
+    subgraph 第三方
+        G[智谱 AI<br/>glm-4-flash + embedding-3]
+        H[高德地图 API]
+        I[SMTP 邮件告警]
     end
 
     A -->|REST / SSE| D
     A -->|Supabase SDK| E
-    D -->|对话 & 向量化| F
-    D -->|地理编码 & 路线| G
+    A -->|Realtime 订阅| F
+    D -->|对话 + 向量化| G
+    D -->|地理编码 + 路线| H
+    D -->|告警邮件| I
 ```
 
 **技术栈：**
 
-- **前端框架**：Taro 4 + React 18 + TypeScript 5
-- **样式方案**：TailwindCSS 3 + Sass
-- **状态管理**：Zustand 5
-- **后端服务**：Supabase（PostgreSQL + pgvector 向量数据库 + Edge Functions）
-- **AI 模型**：智谱 AI（glm-4-flash 用于对话，embedding-3 用于文本向量化）
-- **地图服务**：高德地图 API（地理编码、路线规划、地点搜索）
-- **构建工具**：Vite 4 + Webpack（通过 Taro CLI）
-- **包管理器**：pnpm
+- **前端框架**：Taro 4.1 + React 18 + TypeScript 5
+- **样式方案**：TailwindCSS 3 + Sass + weapp-tw（小程序原子化适配）
+- **状态管理**：Zustand 5 + Immer
+- **后端服务**：Supabase（PostgreSQL + pgvector + Edge Functions + Realtime）
+- **AI 模型**：智谱 AI（`glm-4-flash` 对话，`embedding-3` 向量化，**1024 维**）
+- **地图服务**：高德地图 Web 服务 API
+- **测试**：Vitest（单元测试）+ Playwright（E2E）
+- **代码质量**：Biome + 自定义 ast-grep 规则（`sgconfig.yml`）
+- **构建工具**：Taro CLI（内部 Vite/Webpack）
+- **包管理器**：pnpm（workspace）
 
 ## 页面清单
 
 | 路由 | 页面 | 说明 |
 |------|------|------|
-| `pages/home/index` | 首页 | 功能入口、热点问题展示 |
-| `pages/consult/index` | 法律咨询 | AI 对话式法律问答（含 RAG） |
-| `pages/contract/index` | 合同审查 | 拍照上传合同，AI 审查风险 |
-| `pages/plaza/index` | 案例广场 | 浏览/发布维权经验帖 |
+| `pages/home/index` | 首页 | 功能入口 + 热点问题 + 避雷指南 Swiper |
+| `pages/consult/index` | 法律咨询 | AI 对话（RAG + 流式 SSE + 继续对话） |
+| `pages/contract/index` | 合同审查 | 拍照/上传，AI 审查风险 |
+| `pages/plaza/index` | 案例广场 | 浏览/发布维权案例 |
 | `pages/plaza/post` | 发布帖子 | 案例分享编辑页 |
 | `pages/plaza/detail` | 帖子详情 | 案例详情查看 |
-| `pages/tools/index` | 法律工具 | 实用法律工具入口 |
-| `pages/document/index` | 法条检索 | 法律知识库检索 |
+| `pages/tools/index` | 法律工具 | 工具箱入口 |
+| `pages/document/index` | 法条检索 | 全文检索法律条文 |
 | `pages/calculator/index` | 诉讼费计算 | 诉讼费用计算器 |
-| `pages/rights/index` | 维权导航 | 查找附近/各地维权机构 |
+| `pages/rights/index` | 维权导航 | 附近/各地维权机构 |
 | `pages/evidence/index` | 证据清单 | 证据材料清单生成 |
-| `pages/admin/index` | 知识库管理 | RAG 知识库后台管理 |
+| `pages/admin/index` | 知识库管理 | RAG 知识库 + 数据看板 + 评估面板 |
 | `pages/login/index` | 登录页 | 微信一键登录 |
 | `pages/profile/index` | 个人中心 | 用户信息与统计 |
-| `pages/profile/history` | 咨询历史 | 历史对话记录 |
+| `pages/profile/history` | 咨询历史 | 历史对话记录（支持继续对话） |
 | `pages/profile/saved` | 收藏法条 | 已收藏的法律条文 |
 
 ## Edge Functions
 
-| 函数 | 功能 | 调用方式 |
-|------|------|----------|
-| `legal-chat` | AI 法律咨询对话（含 RAG 检索增强），支持 SSE 流式和非流式双模式 | POST |
-| `embed-document` | 文档文本向量化（调用智谱 embedding-3，1024 维） | POST |
-| `contract-review` | 合同图片审查，识别霸王条款并给出风险建议 | POST |
-| `ai-search` | 联网 AI 搜索，获取实时法律法规信息 | POST |
-| `geocoding` | 地址 → 经纬度坐标转换 | POST |
-| `reverse-geocoding` | 经纬度 → 省市区地址解析 | POST |
-| `route-direction` | 路线规划（驾车/步行/公交） | POST |
-| `route-matrix` | 批量距离矩阵计算（步行距离） | POST |
-| `place-search` | 地点搜索（附近搜索 / 区域搜索） | GET |
-| `ip-location` | IP 定位，获取用户当前城市 | GET |
-| `wechat_miniapp_login` | 微信小程序登录，获取 OpenID 和 Session | POST |
+| 函数 | 功能 | 说明 |
+|------|------|------|
+| `legal-chat` | AI 法律咨询 | RAG 检索（阈值 0.3）+ SSE 流式 + AI 自评 + 全链路追踪 |
+| `embed-document` | 文档向量化 | 智谱 `embedding-3` → 1024 维，**自动 429 限流重试** |
+| `contract-review` | 合同审查 | 图片/PDF OCR + 霸王条款识别 + 风险评级 |
+| `ai-search` | 联网搜索 | 获取实时法律法规信息 |
+| `geocoding` | 地址→坐标 | 高德 Geo 编码 |
+| `reverse-geocoding` | 坐标→地址 | 经纬度逆解析 |
+| `route-direction` | 路线规划 | 驾车/步行/公交路径 |
+| `route-matrix` | 距离矩阵 | 批量步行距离 |
+| `place-search` | 地点搜索 | 附近/区域搜索 |
+| `ip-location` | IP 定位 | 获取用户当前城市 |
+| `wechat_miniapp_login` | 微信登录 | code → OpenID + Session |
+| `notify` | 通知推送 | 站内消息派发 |
+| `alert-notify` | 监控告警 | 异常邮件告警（SMTP） |
+
+## 关键能力详解
+
+### 1. RAG 检索增强生成
+
+- **向量库**：`legal_knowledge` 表 + `pgvector` 1024 维 embedding
+- **检索阈值**：相似度 0.3（实测覆盖率 vs 噪声平衡点）
+- **流程**：用户问题 → embedding-3 向量化 → `match_legal_docs` SQL → Top-K 拼接 → glm-4-flash 生成
+- **评估闭环**：每次对话写入 `rag_evaluations` 表，AI 自评分数透传到前端，可在 admin 看板查看 `rag_accuracy_stats`
+- **限流**：embedding 接口 429 自动指数退避重试
+
+### 2. 内容安全过滤
+
+- **输入侧**：黑名单关键词拦截（敏感词、违禁词）
+- **输出侧**：AI 生成内容二次审核
+- 入口位于 `legal-chat` Edge Function
+
+### 3. 权限模型（RBAC + RLS）
+
+- `00020_add_rbac.sql`：角色表 + 权限映射
+- 全表 RLS 收紧（plaza、legal_knowledge、contracts 桶等）
+- admin 页面通过角色门控访问
+
+### 4. 监控告警
+
+- `00018_add_alert_trigger.sql`：错误日志超阈值触发 DB Trigger
+- `alert-notify` 函数发送 SMTP 邮件
+- `00006_add_observability.sql` + `00021_add_trace.sql`：全链路 trace_id 串联前后端日志
+
+### 5. 自动化测试
+
+- **单元测试**：`pnpm test`（Vitest，node 环境，排除 e2e 目录）
+- **E2E**：`pnpm test:e2e`（Playwright）
+- **CI**：GitHub Actions，Node 24，自动 lint + build + 测试
+- **静态检查**：Biome（`biome.json`）+ ast-grep（`sgconfig.yml`）自定义规则
 
 ## 快速开始
 
 ```bash
 # 克隆仓库
-git clone <repo-url>
-cd <repo>
+git clone https://github.com/zhengzhicong98-source/legal-assistant.git
+cd legal-assistant
 
-# 安装依赖
+# 安装依赖（必须使用 pnpm）
 pnpm install
 
-# 配置环境变量（复制模板并填写）
+# 配置环境变量
 cp .env.example .env
+# 编辑 .env 填入 Supabase URL / Anon Key / 微信 AppID
 
-# 微信小程序开发模式
-pnpm dev:weapp
+# 启动开发模式
+pnpm dev:weapp   # 微信小程序（配合微信开发者工具导入 dist/）
+pnpm dev:h5      # H5 浏览器调试
 
-# 微信小程序构建
+# 生产构建
 pnpm build:weapp
+pnpm build:h5
+
+# 测试
+pnpm test            # 单元测试
+pnpm test:coverage   # 覆盖率
+pnpm test:e2e        # E2E
+
+# 代码检查
+pnpm lint
 ```
 
 ## 环境变量
 
-创建 `.env` 文件（参考 `.env.example`）：
+`.env`（前端注入，Taro 要求 `TARO_APP_` 前缀）：
 
 | 变量 | 说明 | 必填 |
 |------|------|------|
-| `TARO_APP_SUPABASE_URL` | Supabase 项目 URL | 是 |
-| `TARO_APP_SUPABASE_ANON_KEY` | Supabase 匿名密钥 | 是 |
-| `TARO_APP_APP_ID` | 微信小程序 AppID | 是 |
+| `TARO_APP_SUPABASE_URL` | Supabase 项目 URL | ✅ |
+| `TARO_APP_SUPABASE_ANON_KEY` | Supabase 匿名密钥 | ✅ |
+| `TARO_APP_APP_ID` | 微信小程序 AppID | ✅ |
 
-以下密钥在 **Supabase Dashboard → Edge Functions Secrets** 中配置，不在前端代码中：
+**Supabase Dashboard → Edge Functions → Secrets**（不进入前端代码）：
 
 | Secret | 说明 |
 |--------|------|
-| `INTEGRATIONS_API_KEY` | 智谱 AI API Key |
-| `AMAP_KEY` | 高德地图 Web服务 API Key |
+| `INTEGRATIONS_API_KEY` | 智谱 AI API Key（对话 + embedding） |
+| `AMAP_KEY` | 高德地图 Web 服务 Key |
+| `ALERT_SMTP_HOST` / `ALERT_SMTP_USER` / `ALERT_SMTP_PASS` / `ALERT_TO_EMAIL` | 监控告警邮件配置 |
 
-## 数据库表
+## 数据库 Schema
 
-### 核心业务表
+### 业务表
 
-| 表名 | 说明 | 关键字段 |
-|------|------|----------|
-| `rights_centers` | 维权机构数据（2560+ 条） | province, city, name, type, address, phone |
-| `contract_reviews` | 合同审查记录 | file_url, file_name, review_result (JSONB) |
-| `legal_knowledge` | RAG 知识库 | title, source, category, content, embedding (1024维) |
-| `profiles` | 用户信息 | nickname, avatar_url, openid |
-| `consult_history` | 咨询历史 | user_id, question, answer, rag_used |
-| `case_posts` | 案例广场帖子 | user_id, category, title, content, likes_count |
-| `case_likes` | 帖子点赞 | post_id, user_id |
-| `case_saves` | 帖子收藏 | post_id, user_id |
-| `saved_laws` | 收藏法条 | user_id, knowledge_id |
-| `question_stats` | 热点问题统计 | question_text, category, week_number, year, count |
+| 表 | 用途 |
+|------|------|
+| `profiles` | 用户信息（openid 主键） |
+| `legal_knowledge` | RAG 知识库（含 1024 维 embedding） |
+| `laws` | 法律条文（全文索引） |
+| `lawyers` | 律师/律所数据 |
+| `rights_centers` | 维权机构（2560+ 条） |
+| `contract_reviews` | 合同审查结果（JSONB） |
+| `consult_history` | 咨询历史（支持继续对话） |
+| `case_posts` / `case_likes` / `case_saves` | 案例广场 |
+| `saved_laws` | 用户收藏 |
+| `warnings` | 热门避雷指南 |
+| `question_stats` | 热点问题统计 |
+
+### 可观测性 & 评估 & 权限
+
+| 表 | 用途 |
+|------|------|
+| `rag_evaluations` | 每轮 RAG 对话评估记录 |
+| `traces` | 全链路追踪（trace_id） |
+| `notifications` | 站内通知 |
+| `alerts` | 告警事件 |
+| `roles` / `user_roles` / `permissions` | RBAC |
 
 ### 存储桶
 
-| 桶名 | 用途 | 限制 |
+| 桶 | 用途 | 限制 |
 |------|------|------|
-| `contracts` | 合同图片上传 | 10MB, image/jpeg-png-gif-webp, application/pdf |
+| `contracts` | 合同图片/PDF 上传 | 10 MB，image/* + application/pdf |
 
-## 目录结构
+### 迁移历史（`supabase/migrations/`）
 
 ```
-├── README.md
-├── package.json
-├── pnpm-lock.yaml
-├── tsconfig.json
-├── tailwind.config.js
-├── babel.config.js
-├── postcss.config.js
-├── project.config.json          # 微信小程序项目配置
-├── .env.example                 # 环境变量模板
-├── config/
-│   ├── index.ts                 # Taro 构建配置
-│   ├── dev.ts                   # 开发环境配置
-│   └── prod.ts                  # 生产环境配置
-├── src/
-│   ├── app.config.ts            # Taro 应用配置（路由、TabBar）
-│   ├── app.tsx                  # 应用入口
-│   ├── app.scss                 # 全局样式
-│   ├── index.html               # H5 入口 HTML
-│   ├── client/
-│   │   └── supabase.ts          # Supabase 客户端（customFetch 适配微信环境）
-│   ├── components/
-│   │   └── RouteGuard.tsx        # 登录路由守卫
-│   ├── contexts/
-│   │   └── AuthContext.tsx        # 用户认证上下文
-│   ├── db/
-│   │   ├── api.ts               # 数据库操作 API（Supabase 查询封装）
-│   │   ├── types.ts             # 数据库类型定义
-│   │   └── README.md
-│   ├── hooks/
-│   │   └── useTabBarPageClass.ts
-│   ├── pages/                   # 页面组件（每个目录对应一个路由）
-│   │   ├── home/                # 首页
-│   │   ├── consult/             # 法律咨询
-│   │   ├── contract/            # 合同审查
-│   │   ├── plaza/               # 案例广场
-│   │   ├── tools/               # 法律工具
-│   │   ├── document/            # 法条检索
-│   │   ├── calculator/          # 诉讼费计算器
-│   │   ├── rights/              # 维权导航
-│   │   ├── evidence/            # 证据清单
-│   │   ├── admin/               # 知识库管理
-│   │   ├── login/               # 登录
-│   │   └── profile/             # 个人中心
-│   ├── store/                   # Zustand 全局状态
-│   ├── styles/
-│   │   └── overrides.scss
-│   ├── types/
-│   │   └── global.d.ts
-│   └── utils/
-│       ├── callEdgeFunction.ts  # Edge Function 调用工具（绕过 supabase.functions.invoke 兼容问题）
-│       └── upload.ts            # 文件上传工具
-└── supabase/
-    ├── config.toml              # Supabase CLI 配置
-    ├── functions/               # Edge Functions（Deno）
-    │   ├── _shared/cors.ts      # CORS 公共头
-    │   ├── ai-search/
-    │   ├── contract-review/
-    │   ├── embed-document/
-    │   ├── geocoding/
-    │   ├── ip-location/
-    │   ├── legal-chat/
-    │   ├── place-search/
-    │   ├── reverse-geocoding/
-    │   ├── route-direction/
-    │   ├── route-matrix/
-    │   └── wechat_miniapp_login/
-    └── migrations/              # 数据库迁移 SQL
-        ├── 00001_init_legal_assistant.sql
-        ├── 00002_add_legal_knowledge_rag.sql
-        ├── 00003_change_embedding_vector_1536_to_1024.sql
-        ├── 00004_add_plaza_and_hot_questions.sql
-        └── 00005_add_login_and_profile.sql
+00001 init_legal_assistant
+00002 add_legal_knowledge_rag
+00003 change_embedding_vector_1536_to_1024
+00004 add_plaza_and_hot_questions
+00005 add_login_and_profile
+00006 add_observability
+00007 add_rights_rpc
+00008 tighten_plaza_rls
+00009 add_rights_center_types
+00010 notifications
+00011 laws_fulltext
+00012 lawyers
+00013 rights_tracking
+00014 security_hardening
+00015 security_remaining
+00016 legal_knowledge_rls
+00017 fix_contracts_bucket
+00018 add_alert_trigger
+00019 add_rag_evaluation
+00020 add_rbac
+00021 add_trace
+00022 add_warnings
+00023 fix_match_legal_docs_dim
 ```
 
 ## 部署
 
 ### Supabase 数据库
 
-1. 在 [Supabase Dashboard](https://supabase.com/dashboard) 创建项目
-2. 在 SQL Editor 中依次执行 `supabase/migrations/` 中的迁移文件
-3. 在 `Database → Extensions` 中启用 `pgvector` 扩展
-
-### Edge Functions 部署
-
 ```bash
-# 安装 Supabase CLI
-npm install -g supabase
-
-# 登录
-supabase login
-
-# 关联项目
-supabase link --project-ref isaoxdrzcyjisfodssfw
-
-# 部署单个函数
-supabase functions deploy legal-chat
-
-# 部署全部函数
-supabase functions deploy
-
-# 配置 Secrets
-supabase secrets set INTEGRATIONS_API_KEY=your-zhipuai-key
-supabase secrets set AMAP_KEY=your-amap-key
+# 1. 在 Supabase Dashboard 创建项目，启用 pgvector 扩展
+# 2. 按序执行 supabase/migrations/*.sql
 ```
 
-### 微信小程序发布
+### Edge Functions
 
-1. 运行 `pnpm build:weapp` 构建
-2. 打开微信开发者工具，导入 `dist/` 目录
-3. 点击"上传"提交代码审核
-4. 在微信公众平台提交审核并发布
+```bash
+npm install -g supabase
+supabase login
+supabase link --project-ref <your-ref>
+
+# 部署所有函数
+supabase functions deploy
+
+# 单独部署
+supabase functions deploy legal-chat
+supabase functions deploy embed-document
+
+# 配置 Secrets
+supabase secrets set INTEGRATIONS_API_KEY=...
+supabase secrets set AMAP_KEY=...
+supabase secrets set ALERT_SMTP_HOST=...
+```
+
+### 微信小程序
+
+1. `pnpm build:weapp` 生成 `dist/`
+2. 微信开发者工具导入 `dist/`
+3. 上传代码 → 微信公众平台提交审核
+
+### H5 部署
+
+`pnpm build:h5` 产物在 `dist/h5/`，可直接静态托管（已添加 `no-cache` 头避免缓存陈旧 hash）。
+
+## 目录结构
+
+```
+.
+├── README.md
+├── package.json
+├── biome.json                 # Biome 代码检查
+├── sgconfig.yml               # ast-grep 自定义规则
+├── vitest.config.ts           # 单元测试
+├── playwright.config.ts       # E2E 测试
+├── tailwind.config.js
+├── tsconfig.json / tsconfig.check.json
+├── project.config.json        # 微信小程序项目配置
+├── build.sh
+├── config/                    # Taro 构建配置
+├── scripts/                   # CI/lint 脚本
+├── e2e/                       # Playwright 用例
+├── docs/                      # 项目文档
+├── src/
+│   ├── app.config.ts          # 路由 + TabBar 配置
+│   ├── app.tsx / app.scss
+│   ├── index.html             # H5 入口（含 no-cache + base 标签）
+│   ├── __tests__/             # 单元测试
+│   ├── client/supabase.ts     # Supabase 客户端 + customFetch 适配
+│   ├── contexts/AuthContext.tsx
+│   ├── components/            # 公共组件（RouteGuard 等）
+│   ├── db/                    # 数据库操作封装
+│   ├── hooks/
+│   ├── pages/                 # 业务页面
+│   ├── store/                 # Zustand 状态
+│   ├── utils/                 # callEdgeFunction、upload 等
+│   └── assets/
+└── supabase/
+    ├── config.toml
+    ├── functions/             # Edge Functions（Deno）
+    └── migrations/            # 数据库迁移
+```
+
+## 最近更新（节选）
+
+- **RAG 准确性**：维度修正（1024）、相似度阈值 0.3、AI 自评数据回流
+- **稳定性**：Embedding 429 自动重试、Realtime 频道循环重订阅修复、tabbar 图标 404 修复
+- **运营能力**：热门避雷指南后台化、咨询记录支持继续对话、知识库数据看板
+- **质量基建**：RAG 评估系统、RBAC、全链路追踪、内容安全过滤、监控告警（邮件）
+- **测试 & CI**：单元测试 + E2E + Node 24 + Biome + ast-grep
+
+详见 `git log` 与 `VERIFICATION_REPORT.md`。
 
 ## License
 
