@@ -41,7 +41,7 @@ async function getQueryEmbedding(text: string, apiKey: string): Promise<number[]
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({ model: 'embedding-3', input: text }),
+          body: JSON.stringify({ model: 'embedding-3', input: text, dimensions: 1024 }),
           signal: embedController.signal,
         })
       } finally {
@@ -90,7 +90,7 @@ async function searchLegalDocs(
   serviceKey: string
 ): Promise<RagDoc[]> {
   // 先查内存缓存，避免同一问题重复调用 Embedding API
-  const cacheKey = query.slice(0, 50)
+  const cacheKey = `${query.slice(0, 50)}::1024`
   let cached = embeddingCache.get(cacheKey)
   if (cached) {
     console.log(`[legal-chat] RAG: 使用缓存 Embedding, dim=${cached.length}, cache_size=${embeddingCache.size}`)
