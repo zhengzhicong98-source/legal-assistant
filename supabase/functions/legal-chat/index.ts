@@ -41,7 +41,7 @@ async function getQueryEmbedding(text: string, apiKey: string): Promise<number[]
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({ model: 'embedding-3', input: text, dimensions: 1024 }),
+          body: JSON.stringify({ model: 'embedding-3', input: text }),
           signal: embedController.signal,
         })
       } finally {
@@ -112,18 +112,18 @@ async function searchLegalDocs(
   try {
     const supabase = createClient(supabaseUrl, serviceKey)
     const queryVec = `[${embedding.join(',')}]`
-    console.log(`[legal-chat] RAG: 调用 match_legal_docs, dim=${embedding.length}, min_similarity=0.3`)
+    console.log(`[legal-chat] RAG: 调用 match_legal_docs, dim=${embedding.length}, min_similarity=0.1`)
     const { data, error } = await supabase.rpc('match_legal_docs', {
       query_embedding: queryVec,
       match_count: 3,
-      min_similarity: 0.3,
+      min_similarity: 0.1,
     })
     if (error) {
       console.error(`[legal-chat] RAG: match_legal_docs RPC 错误: code=${error.code}, message=${error.message}, details=${error.details}`)
       return []
     }
     if (!data || data.length === 0) {
-      console.log(`[legal-chat] RAG: match_legal_docs 返回 0 条结果 (阈值=0.3)`)
+      console.log(`[legal-chat] RAG: match_legal_docs 返回 0 条结果 (阈值=0.1)`)
       return []
     }
     console.log(`[legal-chat] RAG: 检索成功! 命中 ${data.length} 条文档: ${(data as RagDoc[]).map(d => `${d.title}(sim=${(d as any).similarity?.toFixed?.(3) ?? '?'})`).join(', ')}`)
