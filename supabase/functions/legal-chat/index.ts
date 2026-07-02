@@ -41,7 +41,7 @@ async function getQueryEmbedding(text: string, apiKey: string): Promise<number[]
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({ model: 'embedding-3', input: text }),
+          body: JSON.stringify({ model: 'embedding-3', input: text, dimensions: 1024 }),
           signal: embedController.signal,
         })
       } finally {
@@ -124,6 +124,22 @@ async function searchLegalDocs(
     }
     if (!data || data.length === 0) {
       console.log(`[legal-chat] RAG: match_legal_docs 返回 0 条结果 (阈值=0.1)`)
+      // 诊断：miss 时手动查 Top-1 分数，判断是"完全对不上"还是"分数偏低"
+      try {
+        const { data: top1 } = await supabase.rpc('match_legal_docs', {
+          query_embedding: queryVec,
+          match_count: 1,
+          min_similarity: -1,
+        })
+        if (top1 && (top1 as RagDoc[]).length > 0) {
+          const t = (top1 as any[])[0]
+          console.log(`[legal-chat] RAG 诊断: Top-1 相似度=${t.similarity?.toFixed?.(4) ?? '?'}, title="${t.title}"`)
+        } else {
+          console.log(`[legal-chat] RAG 诊断: 库内无任何可比对向量（Top-1 也为空）`)
+        }
+      } catch (diagErr) {
+        console.warn(`[legal-chat] RAG 诊断查询失败:`, diagErr)
+      }
       return []
     }
     console.log(`[legal-chat] RAG: 检索成功! 命中 ${data.length} 条文档: ${(data as RagDoc[]).map(d => `${d.title}(sim=${(d as any).similarity?.toFixed?.(3) ?? '?'})`).join(', ')}`)

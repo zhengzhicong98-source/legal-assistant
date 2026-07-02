@@ -342,7 +342,7 @@ export default function Chat() {
             const trimmed = line.trim()
             if (!trimmed.startsWith('data:')) continue
             const jsonStr = trimmed.slice(5).trim()
-            if (jsonStr === '[DONE]') break
+            if (jsonStr === '[DONE]') continue
             try {
               const data = JSON.parse(jsonStr)
               // 检查是否是末尾的 rag_used 元数据（含 legal_refs）
