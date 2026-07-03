@@ -72,16 +72,18 @@ export async function getLegalKnowledgeDocs(): Promise<LegalKnowledge[]> {
 
   if (error || !data) return []
 
-  // 查询哪些记录已有 embedding
-  const { data: embeddedRows } = await supabase
+  // 查询未向量化的记录（极少），反推 has_embedding
+  // 注意：不能用 .not('embedding', 'is', null) 反向查已向量化——
+  //   Supabase REST API 默认上限 1000 行，知识库 2444 条会截断导致误判
+  const { data: noEmbeddingRows } = await supabase
     .from('legal_knowledge')
     .select('id')
-    .not('embedding', 'is', null)
+    .is('embedding', null)
 
-  const embeddedIds = new Set((embeddedRows ?? []).map((r: { id: string }) => r.id))
+  const noEmbeddingIds = new Set((noEmbeddingRows ?? []).map((r: { id: string }) => r.id))
   return (data as LegalKnowledge[]).map(d => ({
     ...d,
-    has_embedding: embeddedIds.has(d.id),
+    has_embedding: !noEmbeddingIds.has(d.id),
   }))
 }
 
