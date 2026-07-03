@@ -121,11 +121,12 @@ Deno.serve(async (req) => {
       const { data, error } = await query
       if (error) throw error
 
-      // 单独查询 has_embedding 状态
+      // 单独查询 has_embedding 状态（加 limit 防止默认 1000 行截断）
       const { data: embeddingStatus } = await supabase
         .from('legal_knowledge')
         .select('id')
         .not('embedding', 'is', null)
+        .limit(50000)
 
       const embeddedIds = new Set((embeddingStatus ?? []).map((r: { id: string }) => r.id))
       const docs = (data ?? []).map((d: { id: string }) => ({
