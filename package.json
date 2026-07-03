@@ -79,6 +79,7 @@
     "oxc-parser": "^0.116.0",
     "oxc-resolver": "^11.19.1",
     "oxlint": "^1.51.0",
+    "pg": "^8.22.0",
     "picocolors": "^1.1.1",
     "postcss": "^8.5.6",
     "react-refresh": "^0.18.0",

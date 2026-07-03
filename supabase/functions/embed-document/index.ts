@@ -17,7 +17,7 @@ async function getEmbedding(text: string, apiKey: string): Promise<number[]> {
       body: JSON.stringify({
         model: 'embedding-3',
         input: text,
-        dimensions: 1024,
+        dimensions: 2000,
       }),
       signal: controller.signal,
     })
