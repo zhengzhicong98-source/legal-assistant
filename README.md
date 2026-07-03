@@ -55,7 +55,7 @@ graph LR
 - **样式方案**：TailwindCSS 3 + Sass + weapp-tw（小程序原子化适配）
 - **状态管理**：Zustand 5 + Immer
 - **后端服务**：Supabase（PostgreSQL + pgvector + Edge Functions + Realtime）
-- **AI 模型**：智谱 AI（`glm-4-flash` 对话，`embedding-3` 向量化，**1024 维**）
+- **AI 模型**：智谱 AI（`glm-4-flash` 对话，`embedding-3` 向量化，**2000 维**）
 - **地图服务**：高德地图 Web 服务 API
 - **测试**：Vitest（单元测试）+ Playwright（E2E）
 - **代码质量**：Biome + 自定义 ast-grep 规则（`sgconfig.yml`）
@@ -87,8 +87,8 @@ graph LR
 
 | 函数 | 功能 | 说明 |
 |------|------|------|
-| `legal-chat` | AI 法律咨询 | RAG 检索（阈值 0.3）+ SSE 流式 + AI 自评 + 全链路追踪 |
-| `embed-document` | 文档向量化 | 智谱 `embedding-3` → 1024 维，**自动 429 限流重试** |
+| `legal-chat` | AI 法律咨询 | RAG 混合检索（阈值 0.1）+ 查询改写 + SSE 流式 + AI 自评 + 全链路追踪 |
+| `embed-document` | 文档向量化 | 智谱 `embedding-3` → 2000 维，**自动 429 限流重试** |
 | `contract-review` | 合同审查 | 图片/PDF OCR + 霸王条款识别 + 风险评级 |
 | `ai-search` | 联网搜索 | 获取实时法律法规信息 |
 | `geocoding` | 地址→坐标 | 高德 Geo 编码 |
@@ -105,9 +105,9 @@ graph LR
 
 ### 1. RAG 检索增强生成
 
-- **向量库**：`legal_knowledge` 表 + `pgvector` 1024 维 embedding
-- **检索阈值**：相似度 0.3（实测覆盖率 vs 噪声平衡点）
-- **流程**：用户问题 → embedding-3 向量化 → `match_legal_docs` SQL → Top-K 拼接 → glm-4-flash 生成
+- **向量库**：`legal_knowledge` 表 + `pgvector` 2000 维 embedding（IVFFlat lists=80）
+- **检索阈值**：相似度 0.1（宽松召回 + LLM 二次筛选 + Top-1 诊断日志）
+- **流程**：用户问题 → 查询改写（口语→法律术语）→ embedding-3 向量化 → `match_legal_docs_hybrid` 混合检索 → Top-5 拼接 → glm-4-flash 生成
 - **评估闭环**：每次对话写入 `rag_evaluations` 表，AI 自评分数透传到前端，可在 admin 看板查看 `rag_accuracy_stats`
 - **限流**：embedding 接口 429 自动指数退避重试
 
@@ -192,7 +192,7 @@ pnpm lint
 | 表 | 用途 |
 |------|------|
 | `profiles` | 用户信息（openid 主键） |
-| `legal_knowledge` | RAG 知识库（含 1024 维 embedding） |
+| `legal_knowledge` | RAG 知识库（含 2000 维 embedding，2444 条） |
 | `laws` | 法律条文（全文索引） |
 | `lawyers` | 律师/律所数据 |
 | `rights_centers` | 维权机构（2560+ 条） |
@@ -245,6 +245,7 @@ pnpm lint
 00021 add_trace
 00022 add_warnings
 00023 fix_match_legal_docs_dim
+00024 upgrade_embedding_to_2048
 ```
 
 ## 部署
@@ -333,10 +334,10 @@ supabase secrets set ALERT_SMTP_HOST=...
 |---|------|------|---------|
 | [ADR-001](docs/ADR.md#adr-001向量数据库选型--pgvector) | RAG · 向量存储 | **pgvector** over Milvus/Pinecone | 与业务库同事务；零运维；<100 万条足够 |
 | [ADR-002](docs/ADR.md#adr-002embedding-模型--智谱-embedding-3) | RAG · 向量化 | **智谱 embedding-3** over OpenAI | 中文法律语料召回高 3-5pp；国内直连稳定 |
-| [ADR-003](docs/ADR.md#adr-003向量维度--1024) | RAG · 向量化 | **1024 维** over 1536/2048 | 存储 -50%、查询 -40%、召回仅 -0.5pp |
-| [ADR-004](docs/ADR.md#adr-004检索相似度阈值--03) | RAG · 检索 | **`min_similarity=0.1` + Top-3** | 让 LLM 做二次筛，Top-3 命中率 90% |
+| [ADR-003](docs/ADR.md#adr-003向量维度--1024) | RAG · 向量化 | **2000 维**（pgvector 硬上限） | 实测 Top-5 92.9%、Top-1 46.4%、MRR 0.635 |
+| [ADR-004](docs/ADR.md#adr-004检索相似度阈值--03) | RAG · 检索 | **`min_similarity=0.1` + Top-5** | 让 LLM 做二次筛，Top-5 命中率 92.9% |
 | [ADR-005](docs/ADR.md#adr-005切片策略--500-字重叠切片-vs-按条切片) | RAG · 切片 | **按「条」切** + 超长滑窗 | 一条 knowledge ↔ 一条法条，可解释性强 |
-| [ADR-006](docs/ADR.md#adr-006向量索引--ivfflat-vs-hnsw) | RAG · 索引 | **IVFFlat lists=50** | 构建快、运营友好；> 20 万条时切 HNSW |
+| [ADR-006](docs/ADR.md#adr-006向量索引--ivfflat-vs-hnsw) | RAG · 索引 | **IVFFlat lists=80** | 2444 条规模下构建快、运营友好 |
 | [ADR-007](docs/ADR.md#adr-007状态管理--zustand) | 前端 · 状态 | **Zustand + Immer** | Bundle ~1KB，小程序体积敏感 |
 | [ADR-008](docs/ADR.md#adr-008跨端方案--taro-4) | 前端 · 框架 | **Taro 4 React** | 一套代码微信 + H5 + 未来抖音/支付宝 |
 | [ADR-009](docs/ADR.md#adr-009内容安全--双向过滤) | 安全 · 合规 | **黑名单双向过滤** | 输入 + 输出都过一遍，延迟无感 |
@@ -405,7 +406,7 @@ node scripts/eval-rag.mjs --tag after-corpus-v2 --diff before-corpus-v2
 ## 最近更新（节选）
 
 - **知识库运营**：完整流水线（`seed-knowledge.mjs`）+ 评估器（`eval-rag.mjs`）+ 30 题评估集
-- **RAG 准确性**：维度修正（1024）、相似度阈值 0.1（+Top-1 诊断日志）、AI 自评数据回流
+- **RAG 准确性**：维度修正（2000）、相似度阈值 0.1 + 查询改写、混合检索、AI 自评数据回流
 - **稳定性**：Embedding 429 自动重试、Realtime 频道循环重订阅修复、tabbar 图标 404 修复
 - **运营能力**：热门避雷指南后台化、咨询记录支持继续对话、知识库数据看板
 - **质量基建**：RAG 评估系统、RBAC、全链路追踪、内容安全过滤、监控告警（邮件）

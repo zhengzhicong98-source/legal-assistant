@@ -6,7 +6,7 @@
  * 法律语料入库流水线
  * ------------------------------------------------------------
  * 输入：data/raw/*.txt|*.md（官方法律原文）
- * 输出：Supabase legal_knowledge 表（含 1024 维 embedding）
+ * 输出：Supabase legal_knowledge 表（含 2000 维 embedding）
  *
  * 功能：
  *   - 按「第 X 条」切片（超长条按 500 字滑窗）

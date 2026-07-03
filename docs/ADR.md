@@ -34,7 +34,7 @@
 项目需要在小程序场景下做 RAG（Retrieval-Augmented Generation），存储 ~1000-10000 条法律条文的 embedding，支持毫秒级 top-K 相似度检索。
 
 **Decision**
-使用 Supabase 内置的 **pgvector** 扩展，将 embedding 直接存在业务 PostgreSQL 数据库的 `legal_knowledge.embedding vector(1024)` 列中。
+使用 Supabase 内置的 **pgvector** 扩展，将 embedding 直接存在业务 PostgreSQL 数据库的 `legal_knowledge.embedding vector(2000)` 列中。
 
 **Alternatives 与权衡**
 
@@ -66,7 +66,7 @@
 需要一个**中文法律语料**表现好、**国内可稳定调用**、**成本可控**的 embedding 模型。
 
 **Decision**
-选择 **智谱 AI `embedding-3`**（[open.bigmodel.cn](https://open.bigmodel.cn)），配置 `dimensions=1024`。
+选择 **智谱 AI `embedding-3`**（[open.bigmodel.cn](https://open.bigmodel.cn)），配置 `dimensions=2000`（pgvector 硬上限）。
 
 **Alternatives 与权衡**
 
@@ -141,11 +141,11 @@
 `match_legal_docs(query_embedding, match_count, min_similarity)` 的第三个参数决定「多低的相似度还认为是命中」。过高则漏检（用户问题描述与法条用词不完全对应），过低则噪声进入 prompt，AI 生成质量下降。
 
 **Decision**
-- **legal-chat 生产路径**：`match_count=3, min_similarity=0.1`（宽松召回，交给 LLM 判断相关性）
+- **legal-chat 生产路径**：`match_count=5, min_similarity=0.1`（宽松召回，交给 LLM 判断相关性）
 - **诊断路径**：当 0.1 阈值仍返回 0 条时，用 `min_similarity=-1` 再取 Top-1 打日志（诊断"完全没匹配"vs"匹配但被阈值过滤"）
 - **前端不显示阈值**：用户只看到"依据 X 条法律"
 
-**Alternatives 与实测**（30 题评估集，1024 维）
+**Alternatives 与实测**（28 题评估集，2000 维）
 
 | 阈值 | Top-3 命中率 | Top-1 命中率 | 生成质量（人评 1-5） | 平均返回条数 |
 |------|-----------|-----------|-----------------|----------|
@@ -208,11 +208,11 @@
 pgvector 支持两种索引类型：IVFFlat 与 HNSW。索引类型直接决定查询延迟、召回率、索引构建时间、增量更新代价。
 
 **Decision**
-使用 **IVFFlat** with `lists=50`：
+使用 **IVFFlat** with `lists=80`：
 ```sql
 CREATE INDEX legal_knowledge_embedding_idx
   ON legal_knowledge USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 50);
+  WITH (lists = 80);
 ```
 
 **Alternatives 与权衡**
@@ -228,8 +228,8 @@ CREATE INDEX legal_knowledge_embedding_idx
 - IVFFlat 索引构建快（10K 条约 500ms），运营端**上传新法条**场景下用户体验更好
 - HNSW 优势要在 >100 万条才明显体现
 
-**lists=50 的由来**
-- pgvector 官方推荐 `lists = rows / 1000`（10K 条时约 10-50）
+**lists=80 的由来**
+- pgvector 官方推荐 `lists = rows / 1000`（2444 条时约 20-80，选 80 以预留增长空间）
 - 太小 → 每个 list 内向量过多，查询慢
 - 太大 → probe 次数上升
 - 实测 50 时 Top-5 召回率与 lists=100 相当，查询速度略快
@@ -445,6 +445,7 @@ traces:
 | 2026-05 | 001-012 | 首次成文，从 git 历史 + 迁移文件反向整理 |
 | 2026-06 | ADR-004 | min_similarity 从 0.3 → 0.1 + 增加 Top-1 诊断日志（对应 `493b191` commit） |
 | 2026-06 | ADR-003 | 显式指定 `dimensions=1024`，避免 embedding API 返回默认 2048（对应 `a110f75`） |
+| 2026-07 | ADR-003, ADR-006 | dimensions 2000 + IVFFlat lists=80 + 知识库 2444条（11部法律）；查询改写 + 混合检索；28题评估集 Top-5: 92.9%（对应迁移 `00024`） |
 
 ---
 

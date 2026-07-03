@@ -71,3 +71,4 @@ investigation_summary.json
 /playwright-report/
 /playwright/.cache/
 # /.rules/dist/
+data/.cache/

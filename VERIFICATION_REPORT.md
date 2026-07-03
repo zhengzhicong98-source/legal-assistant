@@ -69,7 +69,7 @@
 | oxlint | 0 errors · 0 warnings · 3 rules · 86 files |
 | tsgo (strictNullChecks) | passed |
 | build:weapp | 6.83s · 16 pages |
-| db migrations | 17/17 applied |
+| db migrations | 24/24 applied |
 | edge functions | 12/12 deployed |
 
 ---

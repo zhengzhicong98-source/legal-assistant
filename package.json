@@ -20,7 +20,10 @@
     "build:weapp": "taro build --type weapp",
     "build:h5": "taro build --type h5",
     "postinstall": "weapp-tw patch",
-    "lint": "./scripts/runLint.sh"
+    "lint": "./scripts/runLint.sh",
+    "seed": "node scripts/seed-knowledge.mjs",
+    "seed:dry-run": "node scripts/seed-knowledge.mjs --dry-run",
+    "eval:rag": "node scripts/eval-rag.mjs"
   },
   "browserslist": [
     "last 5 years",
