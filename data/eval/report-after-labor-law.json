@@ -1,0 +1,415 @@
+{
+  "timestamp": "2026-07-03T11:19:59.712Z",
+  "tag": "after-labor-law",
+  "kbSize": 252,
+  "k": 5,
+  "minSimilarity": 0.1,
+  "metrics": {
+    "total": 28,
+    "hit1": 5,
+    "hit3": 5,
+    "hitK": 6,
+    "hit1Rate": 0.17857142857142858,
+    "hit3Rate": 0.17857142857142858,
+    "hitKRate": 0.21428571428571427,
+    "mrr": 0.18571428571428572,
+    "avgTop1Sim": 0.5206000000000001,
+    "medTop1Sim": 0.49085
+  },
+  "byCategory": {
+    "劳动法": {
+      "total": 8,
+      "hit": 6
+    },
+    "租房": {
+      "total": 5,
+      "hit": 0
+    },
+    "消费者权益": {
+      "total": 5,
+      "hit": 0
+    },
+    "婚姻家庭": {
+      "total": 2,
+      "hit": 0
+    },
+    "侵权": {
+      "total": 3,
+      "hit": 0
+    },
+    "刑事": {
+      "total": 3,
+      "hit": 0
+    },
+    "通用": {
+      "total": 2,
+      "hit": 0
+    }
+  },
+  "perCase": [
+    {
+      "id": "lab-01",
+      "category": "劳动法",
+      "question": "公司试用期六个月合法吗？我签的是两年合同",
+      "expected": [
+        "劳动合同法",
+        "第十九条"
+      ],
+      "top1Source": "《劳动合同法》第二章 劳动合同的订立·第十九条",
+      "top1Sim": 0.7124,
+      "hitRank": 1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "lab-02",
+      "category": "劳动法",
+      "question": "我想辞职，需要提前多久告诉公司？",
+      "expected": [
+        "劳动合同法",
+        "第三十七条"
+      ],
+      "top1Source": "《劳动合同法》第四章 劳动合同的解除和终止·第三十七条",
+      "top1Sim": 0.6464,
+      "hitRank": 1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "lab-03",
+      "category": "劳动法",
+      "question": "被公司无故辞退能拿多少赔偿？",
+      "expected": [
+        "劳动合同法",
+        "第四十七条"
+      ],
+      "top1Source": "《劳动合同法》第四章 劳动合同的解除和终止·第四十七条",
+      "top1Sim": 0.6483,
+      "hitRank": 1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "lab-04",
+      "category": "劳动法",
+      "question": "入职一个月了老板还不给我签合同怎么办",
+      "expected": [
+        "劳动合同法",
+        "第十条"
+      ],
+      "top1Source": "《劳动合同法》第二章 劳动合同的订立·第十条",
+      "top1Sim": 0.5783,
+      "hitRank": 1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "lab-05",
+      "category": "劳动法",
+      "question": "试用期工资能给多低？",
+      "expected": [
+        "劳动合同法",
+        "第二十条"
+      ],
+      "top1Source": "《劳动合同法》第二章 劳动合同的订立·第二十条",
+      "top1Sim": 0.7042,
+      "hitRank": 1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "lab-06",
+      "category": "劳动法",
+      "question": "实习生和公司发生纠纷算劳动争议吗",
+      "expected": [
+        "劳动争议",
+        "第二条"
+      ],
+      "top1Source": "《劳动合同法》第二章 劳动合同的订立·第十八条",
+      "top1Sim": 0.5938,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "lab-07",
+      "category": "劳动法",
+      "question": "公司拖欠工资三个月，我能直接走人吗",
+      "expected": [
+        "劳动合同法",
+        "第三十八条"
+      ],
+      "top1Source": "《劳动合同法》第三章 劳动合同的履行和变更·第三十条",
+      "top1Sim": 0.5952,
+      "hitRank": 5,
+      "rowsReturned": 5
+    },
+    {
+      "id": "lab-08",
+      "category": "劳动法",
+      "question": "我在朋友圈发了公司不好话被开除合法吗",
+      "expected": [
+        "劳动合同法",
+        "第三十九条"
+      ],
+      "top1Source": "《劳动合同法》第七章 法律责任·第九十条",
+      "top1Sim": 0.5832,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "rent-01",
+      "category": "租房",
+      "question": "房东扣我押金说墙上有钉子印合理吗",
+      "expected": [
+        "民法典",
+        "第七百一十条"
+      ],
+      "top1Source": "《劳动合同法》第七章 法律责任·第八十四条",
+      "top1Sim": 0.4889,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "rent-02",
+      "category": "租房",
+      "question": "我合租的室友把客厅改成卧室出租了",
+      "expected": [
+        "民法典",
+        "第七百一十五条"
+      ],
+      "top1Source": "《劳动合同法》第三章 劳动合同的履行和变更·第三十五条",
+      "top1Sim": 0.4721,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "rent-03",
+      "category": "租房",
+      "question": "我拖欠一个月房租房东就要赶我走",
+      "expected": [
+        "民法典",
+        "第七百二十二条"
+      ],
+      "top1Source": "《劳动合同法》第七章 法律责任·第八十二条",
+      "top1Sim": 0.5309,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "rent-04",
+      "category": "租房",
+      "question": "中介说押一付三算合法吗",
+      "expected": [
+        "民法典",
+        "合同编"
+      ],
+      "top1Source": "《劳动合同法》第一章 总  则·第三条",
+      "top1Sim": 0.5482,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "rent-05",
+      "category": "租房",
+      "question": "房东突然涨房租我可以拒绝吗",
+      "expected": [
+        "民法典",
+        "第七百零三条"
+      ],
+      "top1Source": "《劳动合同法》第三章 劳动合同的履行和变更·第三十五条",
+      "top1Sim": 0.5008,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "con-01",
+      "category": "消费者权益",
+      "question": "网上买的衣服不喜欢七天内能退吗",
+      "expected": [
+        "消费者权益",
+        "第二十四条"
+      ],
+      "top1Source": "《劳动合同法》第五章 特别规定·第三节 非全日制用工·第七十一条",
+      "top1Sim": 0.4754,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "con-02",
+      "category": "消费者权益",
+      "question": "商家卖假货我能索赔多少",
+      "expected": [
+        "消费者权益",
+        "第五十五条"
+      ],
+      "top1Source": "《劳动合同法》第七章 法律责任·第八十七条",
+      "top1Sim": 0.4879,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "con-03",
+      "category": "消费者权益",
+      "question": "预付卡商家跑路了怎么办",
+      "expected": [
+        "消费者权益",
+        "第五十三条"
+      ],
+      "top1Source": "《劳动合同法》第二章 劳动合同的订立·第二十八条",
+      "top1Sim": 0.4705,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "con-04",
+      "category": "消费者权益",
+      "question": "外卖吃出头发怎么办",
+      "expected": [
+        "食品安全法",
+        "消费者权益"
+      ],
+      "top1Source": "《劳动合同法》第七章 法律责任·第九十一条",
+      "top1Sim": 0.4273,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "con-05",
+      "category": "消费者权益",
+      "question": "电商平台不发货能投诉哪里",
+      "expected": [
+        "电子商务法"
+      ],
+      "top1Source": "《劳动合同法》第六章 监督检查·第七十七条",
+      "top1Sim": 0.4522,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "mar-01",
+      "category": "婚姻家庭",
+      "question": "父母能不能干涉我谈恋爱",
+      "expected": [
+        "民法典",
+        "婚姻自由"
+      ],
+      "top1Source": "《劳动合同法》第二章 劳动合同的订立·第二十三条",
+      "top1Sim": 0.4281,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "mar-02",
+      "category": "婚姻家庭",
+      "question": "男朋友借了我钱又不还怎么办",
+      "expected": [
+        "民法典",
+        "民间借贷",
+        "合同编"
+      ],
+      "top1Source": "《劳动合同法》第三章 劳动合同的履行和变更·第三十条",
+      "top1Sim": 0.4247,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "tor-01",
+      "category": "侵权",
+      "question": "在校打篮球把同学撞骨折要赔多少",
+      "expected": [
+        "民法典",
+        "侵权责任"
+      ],
+      "top1Source": "《劳动合同法》第七章 法律责任·第九十一条",
+      "top1Sim": 0.468,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "tor-02",
+      "category": "侵权",
+      "question": "我照片被商家印在广告上没经过我同意",
+      "expected": [
+        "民法典",
+        "肖像权"
+      ],
+      "top1Source": "《劳动合同法》第七章 法律责任·第八十九条",
+      "top1Sim": 0.5128,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "tor-03",
+      "category": "侵权",
+      "question": "网上有人造谣说我，能起诉吗",
+      "expected": [
+        "民法典",
+        "名誉权"
+      ],
+      "top1Source": "《劳动合同法》第六章 监督检查·第七十九条",
+      "top1Sim": 0.4759,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "cri-01",
+      "category": "刑事",
+      "question": "帮别人取快递发现是诈骗包裹会被判刑吗",
+      "expected": [
+        "刑法",
+        "帮助信息网络犯罪"
+      ],
+      "top1Source": "《劳动合同法》第七章 法律责任·第九十二条",
+      "top1Sim": 0.41,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "cri-02",
+      "category": "刑事",
+      "question": "考试作弊会被追究刑事责任吗",
+      "expected": [
+        "刑法",
+        "第二百八十四条"
+      ],
+      "top1Source": "《劳动合同法》第六章 监督检查·第七十九条",
+      "top1Sim": 0.4698,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "cri-03",
+      "category": "刑事",
+      "question": "未成年犯罪会被判死刑吗",
+      "expected": [
+        "刑法",
+        "第四十九条"
+      ],
+      "top1Source": "《劳动合同法》第八章 附  则·第九十八条",
+      "top1Sim": 0.3977,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "gen-01",
+      "category": "通用",
+      "question": "民法典什么时候开始生效",
+      "expected": [
+        "民法典",
+        "2021"
+      ],
+      "top1Source": "《劳动合同法》第八章 附  则·第九十八条",
+      "top1Sim": 0.581,
+      "hitRank": -1,
+      "rowsReturned": 5
+    },
+    {
+      "id": "gen-02",
+      "category": "通用",
+      "question": "什么叫无民事行为能力人",
+      "expected": [
+        "民法典",
+        "第二十条"
+      ],
+      "top1Source": "《劳动合同法》第七章 法律责任·第九十三条",
+      "top1Sim": 0.4928,
+      "hitRank": -1,
+      "rowsReturned": 5
+    }
+  ]
+}

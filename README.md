@@ -3,6 +3,8 @@
 面向大学生的法律咨询微信小程序，提供智能法律问答、合同审查、维权导航、案例广场、避雷指南等一站式法律服务。
 
 > 当前版本聚焦三件事：**RAG 准确性**（向量检索 + 评估闭环）、**安全合规**（RLS + 内容安全过滤 + RBAC）、**可观测性**（全链路追踪 + 监控告警）。
+>
+> 🧭 **想快速理解技术选型？** 直接跳到 [架构决策记录（ADR）](#架构决策记录adr) 或 [`docs/ADR.md`](docs/ADR.md)。
 
 ## 核心功能
 
@@ -322,15 +324,95 @@ supabase secrets set ALERT_SMTP_HOST=...
     └── migrations/            # 数据库迁移
 ```
 
+## 架构决策记录（ADR）
+
+> 关键技术选型的**决策 + 备选方案 + 权衡 + 何时替换**都记录在 [`docs/ADR.md`](docs/ADR.md)。
+> 下表是索引，点进去看完整的 Context / Alternatives / Consequences / Trigger。
+
+| # | 领域 | 决策 | 关键权衡（一句话） |
+|---|------|------|---------|
+| [ADR-001](docs/ADR.md#adr-001向量数据库选型--pgvector) | RAG · 向量存储 | **pgvector** over Milvus/Pinecone | 与业务库同事务；零运维；<100 万条足够 |
+| [ADR-002](docs/ADR.md#adr-002embedding-模型--智谱-embedding-3) | RAG · 向量化 | **智谱 embedding-3** over OpenAI | 中文法律语料召回高 3-5pp；国内直连稳定 |
+| [ADR-003](docs/ADR.md#adr-003向量维度--1024) | RAG · 向量化 | **1024 维** over 1536/2048 | 存储 -50%、查询 -40%、召回仅 -0.5pp |
+| [ADR-004](docs/ADR.md#adr-004检索相似度阈值--03) | RAG · 检索 | **`min_similarity=0.1` + Top-3** | 让 LLM 做二次筛，Top-3 命中率 90% |
+| [ADR-005](docs/ADR.md#adr-005切片策略--500-字重叠切片-vs-按条切片) | RAG · 切片 | **按「条」切** + 超长滑窗 | 一条 knowledge ↔ 一条法条，可解释性强 |
+| [ADR-006](docs/ADR.md#adr-006向量索引--ivfflat-vs-hnsw) | RAG · 索引 | **IVFFlat lists=50** | 构建快、运营友好；> 20 万条时切 HNSW |
+| [ADR-007](docs/ADR.md#adr-007状态管理--zustand) | 前端 · 状态 | **Zustand + Immer** | Bundle ~1KB，小程序体积敏感 |
+| [ADR-008](docs/ADR.md#adr-008跨端方案--taro-4) | 前端 · 框架 | **Taro 4 React** | 一套代码微信 + H5 + 未来抖音/支付宝 |
+| [ADR-009](docs/ADR.md#adr-009内容安全--双向过滤) | 安全 · 合规 | **黑名单双向过滤** | 输入 + 输出都过一遍，延迟无感 |
+| [ADR-010](docs/ADR.md#adr-010可观测性--自建-traces-表) | 观测 · 追踪 | **自建 `traces` 表** over Sentry | 与 rag_evaluations 可 JOIN 做深度分析 |
+| [ADR-011](docs/ADR.md#adr-011后端选型--supabase-一体化) | 后端 · 架构 | **Supabase** BaaS 一体化 | Edge Functions 冷启动 <50ms，学生项目 fit |
+| [ADR-012](docs/ADR.md#adr-012编辑器认证--rbac-rls-双层) | 安全 · 权限 | **RBAC + RLS 双层** | 数据库层强制，不可绕过 |
+
+**为什么单独写 ADR？**
+- 让 code review 时对"为什么这么做"有据可查
+- 面试时可以直接指到某一条讨论
+- 未来接手的人不会重复踩坑（每条 ADR 都写了「何时替换」的触发条件）
+
+## 知识库运营
+
+RAG 效果 = **检索** × **生成**，其中 80% 的天花板由**知识库质量**决定。本项目的知识库由完整流水线管理：
+
+```
+data/raw/               # 官方法律原文（.txt/.md），由运营维护
+  ├── civil-code.txt
+  ├── labor-contract-law.txt
+  └── ...
+data/legal-corpus/
+  └── INDEX.md          # 语料来源、条数、更新日期
+data/eval/
+  ├── eval-set.jsonl    # 30 题评估集（涵盖劳动/租房/消费/婚姻/侵权/刑事）
+  └── report-*.json     # 每次评估快照，可 diff
+scripts/
+  ├── seed-knowledge.mjs  # 生产级入库：切片 + 幂等 + 断点续传 + 429 退避
+  └── eval-rag.mjs        # RAG 质量评估：HitRate@K / MRR / 相似度分布
+```
+
+**典型运营流程：**
+
+```bash
+# 1. 放入官方法律原文（见 data/raw/README.md）
+cp ~/downloads/民法典.txt data/raw/civil-code.txt
+
+# 2. 先 dry-run 看会切出多少条
+node scripts/seed-knowledge.mjs --dry-run
+
+# 3. 记录扩充前的基线
+node scripts/eval-rag.mjs --tag before-corpus-v2
+
+# 4. 真正入库（1000+ 条约需 5-10 分钟，取决于 embedding 限流）
+export SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... ZHIPU_API_KEY=...
+node scripts/seed-knowledge.mjs
+
+# 5. 记录扩充后的表现，与基线 diff
+node scripts/eval-rag.mjs --tag after-corpus-v2 --diff before-corpus-v2
+# 输出示例：
+#   知识库    : 10 → 1247  (+1237)
+#   Top-1 命中: 33.3% → 70.0%  (+36.7pp)
+#   Top-3 命中: 46.7% → 90.0%  (+43.3pp)
+#   MRR       : 0.412 → 0.812
+```
+
+**为什么这么设计：**
+
+- **不直接 SQL 灌数据**：保留原文可追溯、便于版本管理、切片策略可迭代
+- **eval-rag 强制评估**：任何知识库改动都必须有 before/after 数据，避免"感觉更好了"
+- **断点续传**：embedding API 429 是常态，中途失败不用从 0 开始
+- **只入官方法律文本**：司法解释、案例、教材有版权风险，坚决不入
+
+数据治理原则详见 [`data/legal-corpus/INDEX.md`](data/legal-corpus/INDEX.md)。
+
 ## 最近更新（节选）
 
-- **RAG 准确性**：维度修正（1024）、相似度阈值 0.3、AI 自评数据回流
+- **知识库运营**：完整流水线（`seed-knowledge.mjs`）+ 评估器（`eval-rag.mjs`）+ 30 题评估集
+- **RAG 准确性**：维度修正（1024）、相似度阈值 0.1（+Top-1 诊断日志）、AI 自评数据回流
 - **稳定性**：Embedding 429 自动重试、Realtime 频道循环重订阅修复、tabbar 图标 404 修复
 - **运营能力**：热门避雷指南后台化、咨询记录支持继续对话、知识库数据看板
 - **质量基建**：RAG 评估系统、RBAC、全链路追踪、内容安全过滤、监控告警（邮件）
 - **测试 & CI**：单元测试 + E2E + Node 24 + Biome + ast-grep
+- **架构决策记录**：`docs/ADR.md` 12 条 ADR，覆盖 RAG / 前端 / 后端 / 安全 / 观测
 
-详见 `git log` 与 `VERIFICATION_REPORT.md`。
+详见 `git log`、`VERIFICATION_REPORT.md` 与 [`docs/ADR.md`](docs/ADR.md)。
 
 ## License
 

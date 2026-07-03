@@ -41,7 +41,7 @@ async function getQueryEmbedding(text: string, apiKey: string): Promise<number[]
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({ model: 'embedding-3', input: text, dimensions: 1024 }),
+          body: JSON.stringify({ model: 'embedding-3', input: text, dimensions: 2000 }),
           signal: embedController.signal,
         })
       } finally {
@@ -83,19 +83,41 @@ interface RagDoc {
   content: string
 }
 
+/** 口语→法律术语查询扩展 */
+const QUERY_EXPANSIONS: [RegExp, string][] = [
+  [/朋友圈|吐槽|网上发言|发了.*不好|说.*坏话/, '在社交媒体发表不当言论 严重违反规章制度 用人单位单方解除劳动合同'],
+  [/帮.*取.*快递|帮.*取.*包裹|帮.*收货.*诈骗|帮.*送货.*诈骗/, '帮助信息网络犯罪活动 明知他人利用信息网络实施犯罪 提供帮助'],
+  [/押一付三|押一付几|押金.*月.*租金/, '租赁押金 预付租金 租赁合同 意思自治 合同自由'],
+  [/涨房租|房租.*涨|加租|租金提高|提高租金/, '变更租金 租赁合同变更 调整租金 合同修改 协商一致'],
+  [/拖欠.*工资|工资.*不发|工资.*拖/, '未及时足额支付劳动报酬 拖欠工资 劳动报酬'],
+  [/无故.*辞退|无故.*开除|被.*炒|被.*开掉/, '违法解除劳动合同 用人单位单方解除 经济补偿金'],
+]
+
+function expandQuery(query: string): string {
+  for (const [pattern, terms] of QUERY_EXPANSIONS) {
+    if (pattern.test(query)) {
+      console.log(`[legal-chat] RAG: 查询改写匹配 pattern=/${pattern.source.slice(0,20)}/`)
+      return query + ' ' + terms
+    }
+  }
+  return query
+}
+
 async function searchLegalDocs(
   query: string,
   apiKey: string,
   supabaseUrl: string,
   serviceKey: string
 ): Promise<RagDoc[]> {
+  // 查询扩展：口语→法律术语
+  const searchQuery = expandQuery(query)
   // 先查内存缓存，避免同一问题重复调用 Embedding API
-  const cacheKey = `${query.slice(0, 50)}::1024`
+  const cacheKey = `${searchQuery.slice(0, 50)}::2000`
   let cached = embeddingCache.get(cacheKey)
   if (cached) {
     console.log(`[legal-chat] RAG: 使用缓存 Embedding, dim=${cached.length}, cache_size=${embeddingCache.size}`)
   }
-  const embedding = cached ?? await getQueryEmbedding(query, apiKey)
+  const embedding = cached ?? await getQueryEmbedding(searchQuery, apiKey)
   if (!embedding) {
     console.log('[legal-chat] RAG: Embedding 获取失败，跳过检索')
     return []
@@ -112,10 +134,11 @@ async function searchLegalDocs(
   try {
     const supabase = createClient(supabaseUrl, serviceKey)
     const queryVec = `[${embedding.join(',')}]`
-    console.log(`[legal-chat] RAG: 调用 match_legal_docs, dim=${embedding.length}, min_similarity=0.1`)
-    const { data, error } = await supabase.rpc('match_legal_docs', {
+    console.log(`[legal-chat] RAG: 调用 match_legal_docs_hybrid, dim=${embedding.length}, min_similarity=0.1`)
+    const { data, error } = await supabase.rpc('match_legal_docs_hybrid', {
       query_embedding: queryVec,
-      match_count: 3,
+      query_text: searchQuery,
+      match_count: 5,
       min_similarity: 0.1,
     })
     if (error) {
