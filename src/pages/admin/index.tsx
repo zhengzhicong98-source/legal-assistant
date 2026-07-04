@@ -292,14 +292,24 @@ export default function Admin() {
 
   return (
     <RoleGuard requiredRole="admin">
-    {/* 数据看板入口 */}
-    <div
-      className="flex items-center gap-2 px-4 py-3 bg-card rounded-xl border border-border mb-4"
-      onClick={() => Taro.navigateTo({ url: '/pages/admin/stats' })}
-    >
-      <div className="i-mdi-chart-bar text-xl text-primary" />
-      <span className="text-xl text-foreground flex-1">数据看板</span>
-      <div className="i-mdi-chevron-right text-xl text-muted-foreground" />
+    {/* 导航入口 */}
+    <div className="flex flex-col gap-2 px-4 pt-4">
+      <div
+        className="flex items-center gap-2 px-4 py-3 bg-card rounded-xl border border-border"
+        onClick={() => Taro.navigateTo({ url: '/pages/admin/stats' })}
+      >
+        <div className="i-mdi-chart-bar text-xl text-primary" />
+        <span className="text-xl text-foreground flex-1">数据看板</span>
+        <div className="i-mdi-chevron-right text-xl text-muted-foreground" />
+      </div>
+      <div
+        className="flex items-center gap-2 px-4 py-3 bg-card rounded-xl border border-border"
+        onClick={() => Taro.navigateTo({ url: '/pages/admin/retrieval-test' })}
+      >
+        <div className="i-mdi-database-search-outline text-xl text-primary" />
+        <span className="text-xl text-foreground flex-1">检索质量测试</span>
+        <div className="i-mdi-chevron-right text-xl text-muted-foreground" />
+      </div>
     </div>
     <div className="min-h-screen bg-background">
       {/* 头部 */}

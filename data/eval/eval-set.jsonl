@@ -32,3 +32,9 @@
 
 {"id":"gen-01","category":"通用","question":"民法典什么时候开始生效","expected_source_contains":["民法典","2021"],"note":"2021-01-01 起施行"}
 {"id":"gen-02","category":"通用","question":"什么叫无民事行为能力人","expected_source_contains":["民法典","第二十条"],"note":"不满 8 周岁"}
+
+{"id":"exact-01","category":"劳动法","question":"《劳动合同法》第三十九条规定了什么","expected_source_contains":["劳动合同法","第三十九条"],"note":"精确条号 query：混合检索关键词通道的核心场景"}
+{"id":"exact-02","category":"租房","question":"民法典第七百一十条","expected_source_contains":["民法典","第七百一十条"],"note":"精确条号 query：无自然语言修饰"}
+{"id":"exact-03","category":"劳动法","question":"劳动合同法第四十七条经济补偿标准","expected_source_contains":["劳动合同法","第四十七条"],"note":"半精确 query：条号+关键词，测两路融合"}
+{"id":"exact-04","category":"消费者权益","question":"消费者权益保护法第五十五条 退一赔三","expected_source_contains":["消费者权益","第五十五条"],"note":"半精确 query：条号+法律术语"}
+{"id":"exact-05","category":"刑事","question":"刑法第二百八十七条之二 帮信罪","expected_source_contains":["刑法","第二百八十七条之二"],"note":"精确条号 query：复杂条号（含'之二'）+ 罪名简称"}
