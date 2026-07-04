@@ -12,6 +12,7 @@ const pages = [
   'pages/evidence/index',
   'pages/admin/index',
   'pages/admin/stats',
+  'pages/admin/retrieval-test',
   'pages/login/index',
   'pages/profile/index',
   'pages/profile/history',
