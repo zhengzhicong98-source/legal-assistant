@@ -15,7 +15,7 @@
 
 | 工具箱 | 知识库管理 | 维权宇宙 |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/06-toolbox-resources.png" width="250"> | <img src="docs/screenshots/08-kb-dashboard.png" width="250"> | <img src="docs/screenshots/09-profile-universe.png" width="250"> |
+| <img src="docs/screenshots/05-toolbox-calculators.png" width="250"> | <img src="docs/screenshots/08-kb-dashboard.png" width="250"> | <img src="docs/screenshots/09-profile-universe.png" width="250"> |
 | 计算器 + 知识库 + 维权导航 + 证据向导 | RAG 数据看板 · 检索准确率评估 | 每一次咨询都是一颗星 · 交互式可视化 |
 
 ## 核心功能
