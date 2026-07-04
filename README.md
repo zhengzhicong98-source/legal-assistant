@@ -26,7 +26,7 @@ graph LR
     subgraph 前端[前端 - Taro 4]
         A[React 18 + TypeScript 5]
         B[TailwindCSS + Sass]
-        C[Zustand 状态管理]
+        C[React Context + Hooks]
     end
 
     subgraph 后端[Supabase]
@@ -53,7 +53,7 @@ graph LR
 
 - **前端框架**：Taro 4.1 + React 18 + TypeScript 5
 - **样式方案**：TailwindCSS 3 + Sass + weapp-tw（小程序原子化适配）
-- **状态管理**：Zustand 5 + Immer
+- **状态管理**：React Context + Hooks（useAuth、useRole）
 - **后端服务**：Supabase（PostgreSQL + pgvector + Edge Functions + Realtime）
 - **AI 模型**：智谱 AI（`glm-4-flash` 对话，`embedding-3` 向量化，**2000 维**）
 - **地图服务**：高德地图 Web 服务 API
@@ -316,7 +316,7 @@ supabase secrets set ALERT_SMTP_HOST=...
 │   ├── db/                    # 数据库操作封装
 │   ├── hooks/
 │   ├── pages/                 # 业务页面
-│   ├── store/                 # Zustand 状态
+│   ├── store/                 # React Context 状态
 │   ├── utils/                 # callEdgeFunction、upload 等
 │   └── assets/
 └── supabase/
@@ -338,7 +338,7 @@ supabase secrets set ALERT_SMTP_HOST=...
 | [ADR-004](docs/ADR.md#adr-004检索相似度阈值--03) | RAG · 检索 | **`min_similarity=0.1` + Top-5** | 让 LLM 做二次筛，Top-5 命中率 92.9% |
 | [ADR-005](docs/ADR.md#adr-005切片策略--500-字重叠切片-vs-按条切片) | RAG · 切片 | **按「条」切** + 超长滑窗 | 一条 knowledge ↔ 一条法条，可解释性强 |
 | [ADR-006](docs/ADR.md#adr-006向量索引--ivfflat-vs-hnsw) | RAG · 索引 | **IVFFlat lists=80** | 2444 条规模下构建快、运营友好 |
-| [ADR-007](docs/ADR.md#adr-007状态管理--zustand) | 前端 · 状态 | **Zustand + Immer** | Bundle ~1KB，小程序体积敏感 |
+| [ADR-007](docs/ADR.md#adr-007状态管理--zustand) | 前端 · 状态 | **React Context + Hooks** | 无第三方依赖，小程序体积友好 |
 | [ADR-008](docs/ADR.md#adr-008跨端方案--taro-4) | 前端 · 框架 | **Taro 4 React** | 一套代码微信 + H5 + 未来抖音/支付宝 |
 | [ADR-009](docs/ADR.md#adr-009内容安全--双向过滤) | 安全 · 合规 | **黑名单双向过滤** | 输入 + 输出都过一遍，延迟无感 |
 | [ADR-010](docs/ADR.md#adr-010可观测性--自建-traces-表) | 观测 · 追踪 | **自建 `traces` 表** over Sentry | 与 rag_evaluations 可 JOIN 做深度分析 |
