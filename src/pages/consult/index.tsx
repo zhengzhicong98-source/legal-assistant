@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import Taro, { useShareAppMessage, useShareTimeline } from '@tarojs/taro'
 import { callEdgeFunction } from '@/utils/callEdgeFunction'
+import { supabase } from '@/client/supabase'
 import { recordQuestion, saveConsultHistory, logAiCall, submitFeedback, saveLaw, saveRagEvaluation, updateRagFeedback } from '@/db/api'
 import { generateTraceId, Span } from '@/utils/tracer'
 import { useAuth } from '@/contexts/AuthContext'
@@ -345,13 +346,21 @@ export default function Chat() {
       streamAbortRef.current = abortCtrl
 
       const startTime = Date.now()
+      // BUG FIX 2026-07-14: 流式请求原本硬编码 anon key，导致已登录用户仍被 legal-chat 判为未认证 401；改为优先用 session.access_token（与 callEdgeFunction 一致）
+      let accessToken: string | undefined
+      try {
+        const { data } = await supabase.auth.getSession()
+        accessToken = data?.session?.access_token
+      } catch {
+        accessToken = undefined
+      }
       try {
         const response = await fetch(url, {
           signal: abortCtrl.signal,
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${anonKey}`,
+            'Authorization': `Bearer ${accessToken ?? anonKey}`,
             'apikey': anonKey || '',
           },
           body: JSON.stringify({ messages: apiMessages, mode: 'chat', stream: true, traceId }),
